@@ -48,3 +48,31 @@ Gitはソースコードや変更履歴を管理するために使われるバ�
 通常，GitHubはコマンドプロンプト(= Command User Interface, CUI)を利用し，gitコマンドをGitHubに送受信することでGitHub上のレポジトリ(≒フォルダ)の更新を行います (e.g., `git push REMOTE-NAME BRANCH-NAME`)．一方，GitHub Desktopでは，Github Desktopの専用アプリ(=Graphic User Interface, GUI)を利用し，GitHubとのやり取りを行います．これにより，gitコマンドを知らなくても簡単にレポジトリの更新を行うことができます．本課題では基本的にGitHub Desktopを利用して，課題の提出を行っていただきます．
 #### インストール
 [GitHub Desktop](https://desktop.github.com/)のサイトからインストールしてください．
+
+## Python
+### 仮想環境の作成と有効化
+本課題を行うにあたり，condaの仮想環境を作成します．コマンドプロンプト(端末, ターミナル)から以下のコマンドを実行することでteam_mechanics2024という仮想環境を作成します．ここでは，Pythonのバージョンが3.11.2のものを利用します．
+```zsh
+conda create -n team_mechanics2024 python==3.11.2
+```
+
+team_mechanics2024の仮想環境を有効化するには以下のコマンドを実行します．
+```zsh
+conda activate team_mechanics2024
+```
+
+team_mechanics2024の仮想環境を無効化するには以下のコマンドを実行します．
+```zsh
+conda deactivate
+```
+
+### プログラムの作成と実行
+Pythonファイルは*.py (*は任意の文字列)により作成することができます．ここでは，以下のソースコード(hello.py)を作成したとします．
+```python:hello.py
+print("Hello, world!")
+```
+上記のソースコードを実行するためには，コマンドプロンプトから以下のコマンドを実行します．
+```zsh
+python hello.py
+```
+コマンドを実行すると，コマンドプロンプトに`Hello, world!`と表示されます．
