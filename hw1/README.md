@@ -233,3 +233,7 @@ for i in range(10):
 |  `s.discard(elem)`   |  集合型`s`から要素`elem`を削除する．elem が set に含まれていなければ何もしない．   |
 |  `s.pop()`   |  集合型`s`の任意の要素を取り除く．集合が空の場合 Key Error を出す．   |
 |  `s.clear()`   |  集合型`s`の全ての要素を取り除く．   |
+
+
+### 参考文献
+1. Pythonドキュメント (https://docs.python.org/ja/3.11/library/stdtypes.html#built-in-types)
