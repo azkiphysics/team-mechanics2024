@@ -236,4 +236,4 @@ for i in range(10):
 
 
 ### 参考文献
-1. Pythonドキュメント (https://docs.python.org/ja/3.11/library/stdtypes.html#built-in-types)
+1. [Pythonドキュメント](https://docs.python.org/ja/3.11/library/stdtypes.html#built-in-types)
