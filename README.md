@@ -29,7 +29,7 @@
 
 ## 準備
 本課題をするにあたり，次の3点を行ってください．
-### Visual Studio Code
+### Visual Studio Codeのインストール
 #### Visual Studio Codeとは
 Visual Studio Code (VS Code)はMicrosoftが開発しているソースコードエディタです．VS Codeを利用することで，効率よくコードを書くことができます．
 #### インストール
