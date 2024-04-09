@@ -49,7 +49,7 @@ Gitはソースコードや変更履歴を管理するために使われるバ�
 #### インストール
 [GitHub Desktop](https://desktop.github.com/)のサイトからインストールしてください．
 
-## Python
+## Pythonの使い方
 ### 仮想環境の作成と有効化
 本課題を行うにあたり，condaの仮想環境を作成します．コマンドプロンプト(端末, ターミナル)から以下のコマンドを実行することでteam_mechanics2024という仮想環境を作成します．ここでは，Pythonのバージョンが3.11.2のものを利用します．
 ```zsh
@@ -76,3 +76,51 @@ print("Hello, world!")
 python hello.py
 ```
 コマンドを実行すると，コマンドプロンプトに`Hello, world!`と表示されます．
+
+## GitHub Desktopの使い方
+### team-mechanics2024レポジトリのクローン
+レポジトリをPCにダウンロードすることをクローンと言います．レポジトリのクローンは以下の手順で行います．
+1. GitHub Desktopアプリ左上のCurrent Repositoryを押し，検索欄の右のAddより，clone repository...を選択します．
+2. `azkiphysics/team-mechanics2024`という名前のレポジトリを選択し，右下のCloneよりレポジトリをローカルにクローンします．
+
+**参考文献**
+1. [【入門】Github Desktopとは？インストール・使い方](https://www.kagoya.jp/howto/it-glossary/develop/githubdesktop/)
+
+### ブランチの作成
+本課題を行うときは，新たにブランチを作成し，作成したブランチ先で作業を行ってもらいます．ブランチの切り方は以下の通りです．
+1. GitHub Desktopアプリ真ん中上のCurrent Branchを押し，検索欄の右のNew Branchより，ブランチを作成します．ブランチ名は`feature-hw(課題番号)-(名前)`という命名規則のもと作成するようにしてください (e.g., `feature-hw1-ito`)．
+2. GitHub Desktopアプリ真ん中上のCurrent Branchを押すと，Default Branch内に1.で作成したブランチがあるので，そのブランチを選択します．
+
+**参考文献**
+1. [【入門】Github Desktopとは？インストール・使い方](https://www.kagoya.jp/howto/it-glossary/develop/githubdesktop/)
+
+### GitHubへの変更のプッシュ
+GitHub上のレポジトリにPC上のローカルレポジトリの変更を反映することをプッシュと言います．GitHubへの変更のプッシュは以下の手順で行います．
+1. GitHub Desktopアプリの真ん中上のCurrent Branchが自分の作成したブランチであることを確認してください．
+2. GitHub Desktopアプリ上で，変更したファイルは左側に表示されていますので，変更内容が問題ないかと，ボックスにチェックが入っているか確認します．
+3. 左下にコメントを記載し，`Commit to (ブランチ名)`を押して，変更をコミットします．
+4. GitHub Desktopアプリの右側のボタン`Push origin`を押してGitHubへ変更をプッシュする．
+
+**参考文献**
+1. [GitHub Desktop から GitHub に変更をプッシュする](https://docs.github.com/ja/desktop/making-changes-in-a-branch/pushing-changes-to-github-from-github-desktop)
+2. [【入門】Github Desktopとは？インストール・使い方](https://www.kagoya.jp/howto/it-glossary/develop/githubdesktop/)
+
+### ブランチのマージ
+作成したブランチで作業した後，他のブランチへ更新内容を反映させたい場合，ブランチのマージを行います．本課題では，主にmainブランチの更新内容を反映するために，mainブランチから作成したブランチへマージを行います．マージの手順は以下の通りです．
+1. GitHub Desktopアプリの真ん中上のCurrent Branchから，`Choose a branch to merge into (ブランチ名)`を選択します．
+2. 更新内容を取り込みたいブランチ(本課題では`main`ブランチ)を選択し，画面下部の`Create a merge commit`を選択します．これにより，マージが完了します．
+
+**参考文献**
+1. [【入門】Github Desktopとは？インストール・使い方](https://www.kagoya.jp/howto/it-glossary/develop/githubdesktop/)
+
+### プルリクエストの作成
+作成したブランチの変更内容を別のブランチに反映させる場合には，プルリクエストを開き，別の共同作業者にマージの許可をもらいます．プルリクエストの開き方は以下の手順で行います．
+1. [GitHubのteam-mechanics2024レポジトリ](https://github.com/azkiphysics/team-mechanics2024)を開きます．
+2. 左上のブランチメニューを開き，作成したブランチを選択します．
+3. ファイルの一覧の上にある黄色のバナーで，[compare & pull request] をクリックして，関連付けられているブランチ(本課題では`main`ブランチ)のpull requestを作成します．
+4. 変更をマージする対象のブランチを [base] ブランチ (`main`ブランチ) ドロップダウン メニューで選択し、次に [compare] ブランチ ドロップダウン メニューを使用して、変更を行ったトピック ブランチ(`feature-hw(課題番号)-(名前)`)を選択します．
+5. プルリクエストのタイトルと説明を入力します．
+6. レビューワーを伊藤 (アカウント名: `azkiphysics`)にし，画面下部の[pull requestの作成]を選択することでpull requestを作成できます．
+
+**参考文献**
+1. [pull request の作成](https://docs.github.com/ja/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request)
