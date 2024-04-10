@@ -349,7 +349,7 @@ class Env:
         return {"t": self.t, "x": self.x, "vx": self.vx, "theta": self.theta}
 ```
 
-上記の`Env`クラスから`CartPoleEnv`クラスを作成する場合，コンストラクタとintegralだけ上書きすることで実装することができます．
+上記の`Env`クラスから`CartPoleEnv`クラスを作成する場合，コンストラクタと`integral`メソッドだけ上書きすることで実装することができます．
 
 ```python
 class CartPoleEnv(Env):
