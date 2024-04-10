@@ -13,9 +13,9 @@
 
 $$
 \begin{eqnarray}
-    F_0 &=& 0\\
-    F_1 &=& 1\\
-    F_{n + 2} &=& F_n + F_{n + 1} (n \geq 0)
+    && F_0 = 0\\
+    && F_1 = 1\\
+    && F_{n + 2} = F_n + F_{n + 1}\ (n \geq 0)
 \end{eqnarray}
 $$
 
