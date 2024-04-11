@@ -292,4 +292,4 @@ if __name__ == "__main__":
 
 プログラムを実行すると次の図が`result`ディレクトリに出力されます．
 
-[ローレンツ系のシミュレーション結果](./ito/result/trajectory.png)
+![ローレンツ系のシミュレーション結果](./ito/result/trajectory.png)
