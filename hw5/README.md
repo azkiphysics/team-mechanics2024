@@ -307,7 +307,7 @@ conda install numpy
 pip install numpy
 ```
 #### numpyのインポート
-numpyは`import numpy`によってインポートすることができます．numpyのインポートは，一般にPython標準ライブラリの下に記載します．また，`import numpy as np`と書くことで，numpy内の関数を利用する時に`np.(関数名)`と書くことで関数の呼び出しができます．
+numpyは`import numpy`によってインポートすることができます．numpyのインポートは，一般にPython標準ライブラリの下に記載します．また，`import numpy as np`と書くことで，`np.(関数名)`で関数の呼び出しができます．
 
 ```python
 (python標準ライブラリのインポート)
@@ -324,7 +324,7 @@ numpy配列はリストやタプルを利用して初期化することができ
 a = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], dtype=np.float64)
 ```
 
-`np.array`の第１引数はnumpy配列に変換するオブジェクト，第2引数`dtype`はデータのタイプを表しており，整数の場合のデフォルト値は`np.int64`であり，小数の場合は`np.float64`です．(c.f., ニューラルネットワークの入力としてnumpy配列を利用する場合，`dtype`は`np.float32`に設定することが多いです．)
+`np.array`の第１引数はnumpy配列に変換するオブジェクト，第2引数`dtype`はデータのタイプを表しており，整数の場合のデフォルト値は`np.int64`，小数の場合のデフォルト値は`np.float64`です．(c.f., ニューラルネットワークの入力としてnumpy配列を利用する場合，`dtype`は`np.float32`に設定することが多いです．)
 
 numpy配列は多次元配列(=行列)も利用することができます．例えば，次のような他次元配列が定義できます．
 
@@ -426,7 +426,7 @@ numpy配列の次元・サイズ・形状の取得にはそれぞれ表に記載
 
 ```python
 arr = np.zeros((10, 5, 4), dtype=np.float64)
-arr.ndim # 次元数 10
+arr.ndim # 次元数 3
 arr.size # サイズ 200
 arr.shape # 形状 (10, 5, 4)
 ```
@@ -615,6 +615,7 @@ print(Vh) # array([[ 0.80672933,  0.29715314,  0.51077177], [-0.45994933, -0.226
 
 ### matplotlib
 #### matplotlibとは
+matplotlibはPythonでグラフを描画するためのライブラリです．2D, 3Dともに描画することができます．
 #### matplotlibのインストール
 Anacondaの仮想環境を利用している場合は，以下のコマンドを入力することでmatplotlibをインストールすることができます．
 ```zsh
@@ -624,3 +625,40 @@ conda install matplotlib
 ```zsh
 pip install matplotlib
 ```
+#### 描画の基本
+グラフの描画をするためには，まず`matplotlib.pyplot`をインポートします．
+```python
+import matplotlib.pyplot as plt
+```
+`matplotlib.pyplot`は一般に`plt`という名前で利用するため，`as plt`としています．
+
+ここでは，正弦波を閉区間 $[0, 2\pi]$ の範囲で描画することにします．numpyを使って正弦波を生成するプログラムは次のとおりです．
+
+```python
+import numpy as np
+
+x = np.linspace(0, 2 * np.pi, 200)
+y = np.sin(x)
+```
+
+次に`matplotlib`を使って上記の正弦波を描画するプログラムを作成すると，次のようになります．
+
+```python
+fig, ax = plt.subplots()
+ax.plot(x, y)
+plt.show()
+```
+
+上記の`fig`はキャンパス全体を表し，`ax`は数値データ(正弦波)を描画する領域を表しています．上記の例では`ax`の領域が設定されていないため，`fig`全体にデータの描画を行う設定となっています．
+
+正弦波のプロットには，`ax.plot`関数を利用します．第１引数と第２引数はそれぞれ図の横軸，縦軸のデータを表しています．そして，`plt.show`関数を書くことで，図の描画結果が表示されます．
+
+![](https://matplotlib.org/stable/_images/users-getting_started-index-1.2x.png)
+
+図の保存をする場合は，以下のように`fig.savefig((図のパス), dpi=(解像度))`を追記します．
+
+```python
+fig.savefig("figure.png", dpi=300)
+```
+
+図はpngの他にepsやpdf形式でも保存できます．
