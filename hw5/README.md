@@ -613,6 +613,11 @@ print(Vh) # array([[ 0.80672933,  0.29715314,  0.51077177], [-0.45994933, -0.226
 
 `U`は左特異ベクトル，`S`は特異値，`Vh`は右特異ベクトルの随伴行列を表しています．
 
+#### numpyのより詳しく知りたい方へ
+今回は，研究でよく使う関数のみ解説しましたが，numpyにはまだまだたくさんの関数が存在します．numpyをより詳しく知りたい方は，numpyのドキュメントをご確認いただければと思います．
+
+[Numpy documentation](https://numpy.org/doc/stable/)
+
 ### matplotlib
 #### matplotlibとは
 matplotlibはPythonでグラフを描画するためのライブラリです．2D, 3Dともに描画することができます．
@@ -662,3 +667,7 @@ fig.savefig("figure.png", dpi=300)
 ```
 
 図はpngの他にepsやpdf形式でも保存できます．
+
+より詳しい説明についてはmatplotlibのドキュメントを確認していただければと思います．
+
+[Matplotlib documentation](https://matplotlib.org/stable/)
