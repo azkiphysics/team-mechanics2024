@@ -2,8 +2,13 @@ if __name__ == "__main__":
     # 整数の入力
     while True:
         x = input("Please enter an integer: ")
-        if isinstance(x, int):
+        try:
+            assert "." not in x
+            x = int(x)
             break
+        except (ValueError, AssertionError):
+            print(f"{x} is not an integer.")
+            continue
 
     if x < 0:
         print(0)
