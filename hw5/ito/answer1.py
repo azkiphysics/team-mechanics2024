@@ -86,7 +86,6 @@ if __name__ == "__main__":
     env = LorenzEnv(t_max, dt=dt)
     buffer = Buffer()
 
-    result = {"t": [], "x": []}
     info = env.reset(initial_t, initial_x)
     done = info.pop("done")
     buffer.reset()
