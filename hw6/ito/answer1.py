@@ -1,3 +1,4 @@
+import argparse
 import os
 import pickle
 from collections import defaultdict
@@ -424,6 +425,10 @@ class MovieMaker(object):
 
 
 if __name__ == "__main__":
+    args = argparse.ArgumentParser("Cart pole problem")
+    args.add_argument("integral_method", choices=["euler_method", "runge_kutta_method"])
+    parser = args.parse_args()
+
     # シミュレーションの設定
     t_max = 10.0
     dt = 1e-3
@@ -432,7 +437,7 @@ if __name__ == "__main__":
     l_pole = 1.0
     initial_t = 0.0
     initial_x = np.array([0.0, 0.0, 0.0, 0.0, 1.0, 0.0, np.pi / 2 - 0.1, 0.0], dtype=np.float64)
-    integral_method = "runge_kutta_method"
+    integral_method = parser.integral_method
 
     # シミュレーション環境の作成
     env = CartPoleEnv(t_max, dt=dt, m_cart=m_cart, m_ball=m_ball, l_pole=l_pole)
