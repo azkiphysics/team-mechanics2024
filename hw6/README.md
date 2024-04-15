@@ -154,10 +154,16 @@ $$
 \begin{bmatrix}
     \mathrm{M} & \boldsymbol{C}_{\boldsymbol{q}}^T\\
     \boldsymbol{C}_{\boldsymbol{q}} & \boldsymbol{0}
-\end{bmatrix}\begin{bmatrix}
+\end{bmatrix}
+
+\begin{bmatrix}
     \boldsymbol{\ddot{q}}\\
     \boldsymbol{\lambda}
-\end{bmatrix} = \begin{bmatrix}
+\end{bmatrix}
+
+=
+
+\begin{bmatrix}
     \boldsymbol{Q}_e\\
     \boldsymbol{Q}_d
 \end{bmatrix}
@@ -200,7 +206,7 @@ $$
 $$
 \boldsymbol{C}_{\boldsymbol{q}} = \begin{bmatrix}
     -1 & 1 & 0 & l_{\mathrm{pole}}\sin(\theta_{\mathrm{pole}})\\
-    0 & 0 & 1 & -l_{\mathrm{pole}}\cos(\theta_{\mathrm{pole}})\\
+    0 & 0 & 1 & -l_{\mathrm{pole}}\cos(\theta_{\mathrm{pole}})
 \end{bmatrix}
 $$
 
@@ -221,6 +227,6 @@ $$
 $$
 (\boldsymbol{C}_{\boldsymbol{q}}\dot{\boldsymbol{q}})_{\boldsymbol{q}} = \begin{bmatrix}
     0 & 0 & 0 & l_{\mathrm{pole}}\dot{\theta}_{\mathrm{pole}}\cos(\theta_{\mathrm{pole}})\\
-    0 & 0 & 0 & l_{\mathrm{pole}}\dot{\theta}_{\mathrm{pole}}\sin(\theta_{\mathrm{pole}})\\
+    0 & 0 & 0 & l_{\mathrm{pole}}\dot{\theta}_{\mathrm{pole}}\sin(\theta_{\mathrm{pole}})
 \end{bmatrix}
 $$
