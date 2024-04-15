@@ -154,16 +154,10 @@ $$
 \begin{bmatrix}
     \mathrm{M} & \boldsymbol{C}_{\boldsymbol{q}}^T\\
     \boldsymbol{C}_{\boldsymbol{q}} & \boldsymbol{0}
-\end{bmatrix}
-
-\begin{bmatrix}
-    \boldsymbol{\ddot{q}}\\
+\end{bmatrix}\begin{bmatrix}
+    \ddot{\boldsymbol{q}}\\
     \boldsymbol{\lambda}
-\end{bmatrix}
-
-=
-
-\begin{bmatrix}
+\end{bmatrix} = \begin{bmatrix}
     \boldsymbol{Q}_e\\
     \boldsymbol{Q}_d
 \end{bmatrix}
