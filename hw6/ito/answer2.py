@@ -26,34 +26,14 @@ if __name__ == "__main__":
         result = pickle.load(f)
 
     t = result["t"]
-    x, y, z = np.split(np.vstack(result["x"]), 3, axis=1)
+    x = np.vstack(result["x"])
 
-    fig = plt.figure(figsize=(9, 6), layout="constrained")
-    axs = fig.subplot_mosaic(
-        [
-            ["trajectory", "time_series_x"],
-            ["trajectory", "time_series_y"],
-            ["trajectory", "time_series_z"],
-        ],
-        per_subplot_kw={("trajectory",): {"projection": "3d"}},
-        gridspec_kw={"width_ratios": [2, 1], "wspace": 0.15, "hspace": 0.05},
-    )
-    axs["trajectory"].plot(x, y, z)
-    axs["trajectory"].set_xlabel("x")
-    axs["trajectory"].set_ylabel("y")
-    axs["trajectory"].set_zlabel("z")
-
-    axs["time_series_x"].plot(t, x)
-    axs["time_series_x"].set_xlabel("Time $t$ s")
-    axs["time_series_x"].set_ylabel("$x$")
-
-    axs["time_series_y"].plot(t, y)
-    axs["time_series_y"].set_xlabel("Time $t$ s")
-    axs["time_series_y"].set_ylabel("$y$")
-
-    axs["time_series_z"].plot(t, z)
-    axs["time_series_z"].set_xlabel("Time $t$ s")
-    axs["time_series_z"].set_ylabel("$z$")
+    fig, ax = plt.subplots()
+    ax.plot(t, x[:, 0], label="$x_1$")
+    ax.plot(t, x[:, 1], label="$v_1$")
+    ax.plot(t, x[:, 6], label="$\\theta_2$")
+    ax.plot(t, x[:, 7], label="$\\omega_2$")
+    ax.legend(loc="upper right")
 
     savedir = loaddir
     savefile = "trajectory.png"

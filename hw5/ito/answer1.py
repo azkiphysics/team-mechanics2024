@@ -63,7 +63,7 @@ class Env(object):
 
 
 class LorenzEnv(Env):
-    def __init__(self, t_max, dt=1e-3, rho=28.0, sigma=10.0, beta=8.0/3.0):
+    def __init__(self, t_max, dt=1e-3, rho=28.0, sigma=10.0, beta=8.0 / 3.0):
         super().__init__(t_max, dt=dt)
         self.rho = rho
         self.sigma = sigma
