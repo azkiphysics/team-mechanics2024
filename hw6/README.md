@@ -23,10 +23,10 @@ pip install opencv-python opencv-contrib-python
 ### ニュートンラフソン法
 ニュートンラフソン法は，ある方程式 $\boldsymbol{f}(\boldsymbol{x}) = \boldsymbol{0}$ の解を数値的に求めるための手法となります．
 
-以下では，ニュートンラフソン法のアルゴリズムを導出方法について説明します．まず， $\boldsymbol{f}(\boldsymbol{x}+\Delta x)$ を1次の項までテイラー展開すると，次式が得られます．
+以下では，ニュートンラフソン法のアルゴリズムを導出方法について説明します．まず， $\boldsymbol{f}(\boldsymbol{x}+\Delta \boldsymbol{x})$ を1次の項までテイラー展開すると，次式が得られます．
 
 $$
-\boldsymbol{f}(\boldsymbol{x}+\Delta x) \simeq \boldsymbol{f}(\boldsymbol{x}) + \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{x}}\Delta \boldsymbol{x}
+\boldsymbol{f}(\boldsymbol{x}+\Delta \boldsymbol{x}) \simeq \boldsymbol{f}(\boldsymbol{x}) + \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{x}}\Delta \boldsymbol{x}
 $$
 
 ニュートンラフソン法では, $\boldsymbol{f}(\boldsymbol{x}+\Delta \boldsymbol{x}) = \boldsymbol{0}$ となるように $\Delta x$ を決定します．上式と $\boldsymbol{f}(\boldsymbol{x}+\Delta \boldsymbol{x}) = \boldsymbol{0}$ を用いて $\Delta x$ を求めると，次のようになります．
