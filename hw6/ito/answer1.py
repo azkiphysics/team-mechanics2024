@@ -73,7 +73,7 @@ class Env(object):
 
     def euler_method(self, t: float, x: np.ndarray, u: np.ndarray) -> Tuple[float, np.ndarray]:
         """オイラー法"""
-        dx_dt = self.motion_equation(x, u)
+        dx_dt = self.motion_equation(t, x, u)
         next_t = t + self.dt
         next_x = x + self.dt * dx_dt
         return next_t, next_x
@@ -92,6 +92,10 @@ class Env(object):
         """運動方程式"""
         raise NotImplementedError()
 
+    def compute_energy(self, x: np.ndarray) -> float:
+        """全エネルギーの計算"""
+        raise NotImplementedError()
+
     def reset(
         self,
         initial_t: float,
@@ -103,14 +107,16 @@ class Env(object):
         self.t = initial_t
         self.x = initial_x.copy()
         done = self.t >= self.t_max
-        info = {"t": self.t, "x": self.x.copy(), "done": done}
+        e = self.compute_energy(self.x)
+        info = {"t": self.t, "x": self.x.copy(), "e": e, "done": done}
         return info
 
     def step(self, u: np.ndarray) -> Dict[str, bool | float | np.ndarray]:
         """シミュレーションの実行 (1ステップ)"""
         self.t, self.x = self.integral(self.t, self.x, u)
         done = self.t >= self.t_max
-        info = {"t": self.t, "x": self.x.copy(), "done": done}
+        e = self.compute_energy(self.x)
+        info = {"t": self.t, "x": self.x.copy(), "e": e, "done": done}
         return info
 
     def render(self) -> np.ndarray:
@@ -189,16 +195,18 @@ class MultiBodyEnv(Env):
         """シミュレーションの初期化"""
         info = super().reset(initial_t, initial_x, integral_method)
         self.x = self.newton_raphson_method(self.t, self.x)
+        e = self.compute_energy(self.x)
         C = self.compute_C(self.t, self.x)
-        info |= {"x": self.x.copy(), "C": C.copy()}
+        info |= {"x": self.x.copy(), "e": e, "C": C.copy()}
         return info
 
     def step(self, u) -> Dict[str, bool | float | np.ndarray]:
         """シミュレーションの実行 (1ステップ)"""
         info = super().step(u)
         self.x = self.newton_raphson_method(self.t, self.x)
+        e = self.compute_energy(self.x)
         C = self.compute_C(self.t, self.x)
-        info |= {"x": self.x.copy(), "C": C.copy()}
+        info |= {"x": self.x.copy(), "e": e, "C": C.copy()}
         return info
 
 
@@ -289,10 +297,20 @@ class CartPoleEnv(MultiBodyEnv):
         dx_dt[[1, 3, 5, 7]] = q_lam[:4].copy()
         return dx_dt
 
+    def compute_energy(self, x: np.ndarray) -> float:
+        vx1 = x[1]
+        vx2 = x[3]
+        y2 = x[4]
+        vy2 = x[5]
+        return 0.5 * self.m_cart * vx1**2 + 0.5 * self.m_ball * (vx2**2 + vy2**2) + self.m_ball * self.g * y2
+
     def render(self) -> np.ndarray:
         if self.fig is None:
             self.fig, self.ax = plt.subplots()
         self.ax.cla()
+        self.ax.set_xlim(-2.5 * self.l_pole, 2.5 * self.l_pole)
+        self.ax.set_ylim(-1.5 * self.l_pole, 1.5 * self.l_pole)
+        self.ax.set_axis_off()
         self.ax.set_aspect("equal")
 
         # 球体オブジェクト描画用角度配列
@@ -301,7 +319,7 @@ class CartPoleEnv(MultiBodyEnv):
 
         # 地平線の描画
         horizon_x = np.linspace(-10.0 * self.l_pole, 10.0 * self.l_pole, 100)
-        horizon_y = -0.3 * self.l_pole * np.ones_like(horizon_x, dtype=np.float64)
+        horizon_y = -0.2 * self.l_pole * np.ones_like(horizon_x, dtype=np.float64)
         self.ax.plot(horizon_x, horizon_y, color="black")
 
         # カートの描画
@@ -335,10 +353,6 @@ class CartPoleEnv(MultiBodyEnv):
         ball_upper_y = ball_center[1] + 0.1 * self.l_pole * np.sin(angle_upper)
         ball_lower_y = ball_center[1] + 0.1 * self.l_pole * np.sin(angle_lower)
         self.ax.fill_between(ball_x, ball_upper_y, ball_lower_y, color="red", zorder=2)
-
-        self.ax.set_xlim(-5.0 * self.l_pole, 5.0 * self.l_pole)
-        self.ax.set_ylim(-3.5 * self.l_pole, 3.5 * self.l_pole)
-        self.ax.set_axis_off()
 
         # 図の描画
         self.fig.canvas.draw()
@@ -388,7 +402,7 @@ class FigureMaker(object):
 
 class MovieMaker(object):
     def __init__(self) -> None:
-        self.frames = None
+        self.frames: List[np.ndarray] = None
 
     def reset(self):
         self.frames = []
@@ -396,10 +410,11 @@ class MovieMaker(object):
     def add(self, frame: np.ndarray):
         self.frames.append(frame)
 
-    def make(self, savedir: str, t_max: float, savefile="animation.mp4", size: Tuple[int, int] = (600, 600)):
+    def make(self, savedir: str, t_max: float, savefile: str = "animation.mp4"):
         os.makedirs(savedir, exist_ok=True)
         savepath = os.path.join(savedir, savefile)
         fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
+        size = self.frames[0].shape[:2][::-1]
         video = cv2.VideoWriter(savepath, fourcc, int(len(self.frames) / t_max), size)
         for frame in self.frames:
             frame = cv2.resize(frame, size)
@@ -416,7 +431,8 @@ if __name__ == "__main__":
     m_ball = 1.0
     l_pole = 1.0
     initial_t = 0.0
-    initial_x = np.array([0.0, 0.0, 0.0, 0.0, 1.0, 0.0, np.pi / 2 - 0.05, 0.0], dtype=np.float64)
+    initial_x = np.array([0.0, 0.0, 0.0, 0.0, 1.0, 0.0, np.pi / 2 - 0.1, 0.0], dtype=np.float64)
+    integral_method = "runge_kutta_method"
 
     # シミュレーション環境の作成
     env = CartPoleEnv(t_max, dt=dt, m_cart=m_cart, m_ball=m_ball, l_pole=l_pole)
@@ -424,24 +440,25 @@ if __name__ == "__main__":
     movie_maker = MovieMaker()
 
     # シミュレーションの実行
-    info = env.reset(initial_t, initial_x)
+    info = env.reset(initial_t, initial_x, integral_method=integral_method)
     done = info.pop("done")
     buffer.reset()
     buffer.push(info)
     movie_maker.reset()
     movie_maker.add(env.render())
     k_steps = 0
+    movie_freq = t_max // dt // 500
     while not done:
         k_steps += 1
-        u = np.random.random(1)
+        u = np.zeros(1, dtype=np.float64)
         info = env.step(u)
         done = info.pop("done")
         buffer.push(info)
-        if k_steps % 100 == 0 or done:
+        if k_steps % movie_freq == 0 or done:
             movie_maker.add(env.render())
 
     # データの保存
-    savedir = "result"
+    savedir = os.path.join("result", integral_method)
     savefile = "trajectory.pickle"
     buffer.save(savedir, savefile)
 
@@ -484,5 +501,18 @@ if __name__ == "__main__":
     figure_maker.make(figure_data)
     figure_maker.save(savedir, savefile="traj_constraint.png")
 
+    # 全エネルギーの時間発展の描画
+    e = np.array(data.get("e"), dtype=np.float64)
+    figure_data = {
+        "x": {"label": "Time $t$ s", "value": t},
+        "y": {
+            "label": "Total energy $E$ J",
+            "value": [{"label": "$E$", "value": e}],
+        },
+    }
+    figure_maker.reset()
+    figure_maker.make(figure_data)
+    figure_maker.save(savedir, savefile="traj_total_energy.png")
+
     # 動画の保存
-    movie_maker.make(savedir, t[-1], size=(600, 400))
+    movie_maker.make(savedir, t[-1])
