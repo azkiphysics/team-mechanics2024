@@ -15,6 +15,10 @@
 pip install opencv-python opencv-contrib-python
 ```
 
+### 課題1 (数値計算法の実装)
+
+### 課題2 (数値計算法の比較)
+
 ## 解説
 ### ニュートンラフソン法
 ニュートンラフソン法は，ある方程式 $\boldsymbol{f}(\boldsymbol{x}) = \boldsymbol{0}$ の解を数値的に求めるための手法となります．
@@ -37,7 +41,7 @@ $$
 \boldsymbol{x} \leftarrow \boldsymbol{x} + \Delta \boldsymbol{x}
 $$
 
-この更新式を $\|\Delta\boldsymbol{x}\| < \epsilon$ ($\epsilon$ : 閾値)となるまで繰り返し適用し，解を求めます．
+この更新式を $\||\Delta\boldsymbol{x}\|| < \epsilon$ ($\epsilon$ : 閾値)となるまで繰り返し適用し，解を求めます．
 
 ### オイラー法
 オイラー法は，常微分方程式 $\dot{\boldsymbol{x}} = \boldsymbol{f}(\boldsymbol{x})$ の数値解法の一つです．時刻 $t$ の状態変数 $\boldsymbol{x}(t)$ から時刻 $t + dt$ の状態変数 $\boldsymbol{x}(t + dt)$ を求めるために，以下の更新式を利用します．
@@ -64,4 +68,4 @@ $$
 \end{eqnarray}
 $$
 
-初期値 $t = t_0$ , $\boldsymbol{x} = \boldsymbol{x}_0$ から始めて，上式を繰り返し実行することにより，状態変数 $x$ の時間発展を求めることができます．
+初期値 $t = t_0$ , $\boldsymbol{x} = \boldsymbol{x}_0$ から始めて，上式を繰り返し実行することにより，状態変数 $\boldsymbol{x}$ の時間発展を求めることができます．

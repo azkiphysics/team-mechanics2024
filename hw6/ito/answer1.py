@@ -1,6 +1,7 @@
 import argparse
 import os
 import pickle
+import time
 from collections import defaultdict
 from typing import Dict, List, Tuple
 
@@ -194,20 +195,26 @@ class MultiBodyEnv(Env):
         integral_method: str = "runge_kutta_method",
     ) -> Dict[str, bool | float | np.ndarray]:
         """シミュレーションの初期化"""
+        start = time.time()
         info = super().reset(initial_t, initial_x, integral_method)
         self.x = self.newton_raphson_method(self.t, self.x)
         e = self.compute_energy(self.x)
         C = self.compute_C(self.t, self.x)
-        info |= {"x": self.x.copy(), "e": e, "C": C.copy()}
+        end = time.time()
+        calc_speed = end - start
+        info |= {"x": self.x.copy(), "e": e, "C": C.copy(), "calc_speed": calc_speed}
         return info
 
     def step(self, u) -> Dict[str, bool | float | np.ndarray]:
         """シミュレーションの実行 (1ステップ)"""
+        start = time.time()
         info = super().step(u)
         self.x = self.newton_raphson_method(self.t, self.x)
         e = self.compute_energy(self.x)
         C = self.compute_C(self.t, self.x)
-        info |= {"x": self.x.copy(), "e": e, "C": C.copy()}
+        end = time.time()
+        calc_speed = end - start
+        info |= {"x": self.x.copy(), "e": e, "C": C.copy(), "calc_speed": calc_speed}
         return info
 
 
@@ -370,7 +377,7 @@ class FigureMaker(object):
     def reset(self):
         """図作成ツールの初期化"""
         if self.ax is None:
-            self.fig, self.ax = plt.subplots()
+            self.fig, self.ax = plt.subplots(figsize=(8, 6))
         else:
             self.ax.cla()
 
@@ -474,7 +481,7 @@ if __name__ == "__main__":
     t = np.array(data.get("t"), dtype=np.float64)
     independent_x = np.array(data.get("x"), dtype=np.float64)[:, [0, 1, 6, 7]]
     figure_data = {
-        "x": {"label": "Time $t$ s", "value": t},
+        "x": {"label": "Time $t$ (s)", "value": t},
         "y": {
             "label": "State",
             "value": [
@@ -492,7 +499,7 @@ if __name__ == "__main__":
     # 拘束条件の時間発展の描画
     C = np.array(data.get("C"), dtype=np.float64)
     figure_data = {
-        "x": {"label": "Time $t$ s", "value": t},
+        "x": {"label": "Time $t$ (s)", "value": t},
         "y": {
             "label": "Constraint $C$",
             "value": [
@@ -508,7 +515,7 @@ if __name__ == "__main__":
     # 全エネルギーの時間発展の描画
     e = np.array(data.get("e"), dtype=np.float64)
     figure_data = {
-        "x": {"label": "Time $t$ s", "value": t},
+        "x": {"label": "Time $t$ (s)", "value": t},
         "y": {
             "label": "Total energy $E$ J",
             "value": [{"label": "$E$", "value": e}],
@@ -517,6 +524,19 @@ if __name__ == "__main__":
     figure_maker.reset()
     figure_maker.make(figure_data)
     figure_maker.save(savedir, savefile="traj_total_energy.png")
+
+    # 計算速度の時間発展の描画
+    calc_speed = np.array(data.get("calc_speed"), dtype=np.float64)
+    figure_data = {
+        "x": {"label": "Time $t$ (s)", "value": t},
+        "y": {
+            "label": "Calculation speed $t_{calc}$ (s)",
+            "value": [{"label": "$t_{calc}$", "value": calc_speed}],
+        },
+    }
+    figure_maker.reset()
+    figure_maker.make(figure_data)
+    figure_maker.save(savedir, savefile="traj_calculation_speed.png")
 
     # 動画の保存
     movie_maker.make(savedir, t[-1])
