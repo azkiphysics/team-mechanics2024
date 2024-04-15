@@ -151,16 +151,18 @@ $$
 マルチボディシステムの微分代数方程式は以下の式で表されます．
 
 $$
-\begin{bmatrix}
-    \mathrm{M} & \boldsymbol{C}_{\boldsymbol{q}}^T\\
-    \boldsymbol{C}_{\boldsymbol{q}} & \boldsymbol{0}
-\end{bmatrix}\begin{bmatrix}
-    \ddot{\boldsymbol{q}}\\
-    \boldsymbol{\lambda}
-\end{bmatrix} = \begin{bmatrix}
-    \boldsymbol{Q}_e\\
-    \boldsymbol{Q}_d
-\end{bmatrix}
+\begin{equation}
+    \begin{bmatrix}
+        \mathrm{M} & \boldsymbol{C}_{\boldsymbol{q}}^T\\
+        \boldsymbol{C}_{\boldsymbol{q}} & \boldsymbol{0}
+    \end{bmatrix}\begin{bmatrix}
+        \ddot{\boldsymbol{q}}\\
+        \boldsymbol{\lambda}
+    \end{bmatrix} = \begin{bmatrix}
+        \boldsymbol{Q}_e\\
+        \boldsymbol{Q}_d
+    \end{bmatrix}
+\end{equation}
 $$
 
 $\mathrm{M}$は質量慣性行列, $\boldsymbol{C}_{\boldsymbol{q}}$ は拘束条件式 $\boldsymbol{C}$ のヤコビ行列, $\boldsymbol{q}$ は一般座標, $\boldsymbol{\lambda}$ はラグランジュの未定乗数, $\boldsymbol{Q}_e$ は一般外力, $\boldsymbol{Q}_d$ は次式で定義されるベクトルとなります．
