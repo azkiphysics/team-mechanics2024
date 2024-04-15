@@ -530,8 +530,8 @@ if __name__ == "__main__":
     figure_data = {
         "x": {"label": "Time $t$ (s)", "value": t},
         "y": {
-            "label": "Calculation speed $t_{calc}$ (s)",
-            "value": [{"label": "$t_{calc}$", "value": calc_speed}],
+            "label": "Calculation speed $t_{\\mathrm{calc}}$ (s)",
+            "value": [{"label": "$t_{\\mathrm{calc}}$", "value": calc_speed}],
         },
     }
     figure_maker.reset()
