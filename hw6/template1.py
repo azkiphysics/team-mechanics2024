@@ -23,6 +23,7 @@ plt.rcParams["xtick.direction"] = "in"  # x axis in
 plt.rcParams["ytick.direction"] = "in"  # y axis in
 plt.rcParams["axes.linewidth"] = 1.0  # axis line width
 plt.rcParams["axes.grid"] = True  # make grid
+plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
 
 
 class Buffer(object):
@@ -408,6 +409,8 @@ class FigureMaker(object):
 
 
 class MovieMaker(object):
+    """動画作成クラス"""
+
     def __init__(self) -> None:
         self.frames: List[np.ndarray] = None
 
@@ -537,6 +540,7 @@ if __name__ == "__main__":
     figure_maker.reset()
     figure_maker.make(figure_data)
     figure_maker.save(savedir, savefile="traj_calculation_speed.png")
+    figure_maker.close()
 
     # 動画の保存
     movie_maker.make(savedir, t[-1])
