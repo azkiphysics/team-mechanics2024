@@ -16,33 +16,11 @@ pip install opencv-python opencv-contrib-python
 ```
 
 ### 課題1 (数値計算法の実装)
+`template1.py`を利用して，オイラー法，ルンゲクッタ法を実装してください．オイラー法は`Env`クラスの`euler_method`メソッド, ルンゲクッタ法は`Env`クラスの`runge_kutta_method`メソッドを編集して実装してください．
 
 ### 課題2 (数値計算法の比較)
 
 ## 解説
-### ニュートンラフソン法
-ニュートンラフソン法は，ある方程式 $\boldsymbol{f}(\boldsymbol{x}) = \boldsymbol{0}$ の解を数値的に求めるための手法となります．
-
-以下では，ニュートンラフソン法のアルゴリズムを導出方法について説明します．まず， $\boldsymbol{f}(\boldsymbol{x}+\Delta \boldsymbol{x})$ を1次の項までテイラー展開すると，次式が得られます．
-
-$$
-\boldsymbol{f}(\boldsymbol{x}+\Delta \boldsymbol{x}) \simeq \boldsymbol{f}(\boldsymbol{x}) + \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{x}}\Delta \boldsymbol{x}
-$$
-
-ニュートンラフソン法では, $\boldsymbol{f}(\boldsymbol{x}+\Delta \boldsymbol{x}) = \boldsymbol{0}$ となるように $\Delta x$ を決定します．上式と $\boldsymbol{f}(\boldsymbol{x}+\Delta \boldsymbol{x}) = \boldsymbol{0}$ を用いて $\Delta x$ を求めると，次のようになります．
-
-$$
-\Delta \boldsymbol{x} = -\Bigg(\frac{\partial \boldsymbol{f}}{\partial \boldsymbol{x}}\Bigg)^{-1}\boldsymbol{f}(\boldsymbol{x})
-$$
-
-上記の $\Delta\boldsymbol{x}$ を用いて，以下のように $\boldsymbol{x}$ を更新します．
-
-$$
-\boldsymbol{x} \leftarrow \boldsymbol{x} + \Delta \boldsymbol{x}
-$$
-
-この更新式を $\||\Delta\boldsymbol{x}\|| < \epsilon$ ($\epsilon$ : 閾値)となるまで繰り返し適用し，解を求めます．
-
 ### オイラー法
 オイラー法は，常微分方程式 $\dot{\boldsymbol{x}} = \boldsymbol{f}(\boldsymbol{x})$ の数値解法の一つです．時刻 $t$ の状態変数 $\boldsymbol{x}(t)$ から時刻 $t + dt$ の状態変数 $\boldsymbol{x}(t + dt)$ を求めるために，以下の更新式を利用します．
 
@@ -69,3 +47,26 @@ $$
 $$
 
 初期値 $t = t_0$ , $\boldsymbol{x} = \boldsymbol{x}_0$ から始めて，上式を繰り返し実行することにより，状態変数 $\boldsymbol{x}$ の時間発展を求めることができます．
+
+### ニュートンラフソン法
+ニュートンラフソン法は，ある方程式 $\boldsymbol{f}(\boldsymbol{x}) = \boldsymbol{0}$ の解を数値的に求めるための手法となります．
+
+以下では，ニュートンラフソン法のアルゴリズムを導出方法について説明します．まず， $\boldsymbol{f}(\boldsymbol{x}+\Delta \boldsymbol{x})$ を1次の項までテイラー展開すると，次式が得られます．
+
+$$
+\boldsymbol{f}(\boldsymbol{x}+\Delta \boldsymbol{x}) \simeq \boldsymbol{f}(\boldsymbol{x}) + \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{x}}\Delta \boldsymbol{x}
+$$
+
+ニュートンラフソン法では, $\boldsymbol{f}(\boldsymbol{x}+\Delta \boldsymbol{x}) = \boldsymbol{0}$ となるように $\Delta x$ を決定します．上式と $\boldsymbol{f}(\boldsymbol{x}+\Delta \boldsymbol{x}) = \boldsymbol{0}$ を用いて $\Delta x$ を求めると，次のようになります．
+
+$$
+\Delta \boldsymbol{x} = -\Bigg(\frac{\partial \boldsymbol{f}}{\partial \boldsymbol{x}}\Bigg)^{-1}\boldsymbol{f}(\boldsymbol{x})
+$$
+
+上記の $\Delta\boldsymbol{x}$ を用いて，以下のように $\boldsymbol{x}$ を更新します．
+
+$$
+\boldsymbol{x} \leftarrow \boldsymbol{x} + \Delta \boldsymbol{x}
+$$
+
+この更新式を $\||\Delta\boldsymbol{x}\|| < \epsilon$ ($\epsilon$ : 閾値)となるまで繰り返し適用し，解を求めます．
