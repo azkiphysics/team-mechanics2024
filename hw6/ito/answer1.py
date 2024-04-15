@@ -56,6 +56,7 @@ class Env(object):
         self.integral_method: str | None = None
 
     def integral(self, t: float, x: np.ndarray, u: np.ndarray) -> Tuple[float, np.ndarray]:
+        """運動方程式の積分"""
         if self.integral_method == "euler_method":
             return self.euler_method(t, x, u)
         elif self.integral_method == "runge_kutta_method":
@@ -64,12 +65,14 @@ class Env(object):
             assert False
 
     def euler_method(self, t: float, x: np.ndarray, u: np.ndarray) -> Tuple[float, np.ndarray]:
+        """オイラー法"""
         dx_dt = self.motion_equation(x, u)
         next_t = t + self.dt
         next_x = x + self.dt * dx_dt
         return next_t, next_x
 
     def runge_kutta_method(self, t: float, x: np.ndarray, u: np.ndarray) -> Tuple[float, np.ndarray]:
+        """ルンゲクッタ法"""
         k1 = self.motion_equation(t, x, u)
         k2 = self.motion_equation(t, x + self.dt / 2 * k1, u)
         k3 = self.motion_equation(t, x + self.dt / 2 * k2, u)
@@ -79,6 +82,7 @@ class Env(object):
         return next_t, next_x
 
     def motion_equation(self, t: float, x: np.ndarray, u: np.ndarray):
+        """運動方程式"""
         raise NotImplementedError()
 
     def reset(
@@ -87,6 +91,7 @@ class Env(object):
         initial_x: np.ndarray,
         integral_method: str = "runge_kutta_method",
     ) -> Dict[str, bool | float | np.ndarray]:
+        """シミュレーションの初期化"""
         self.integral_method = integral_method
         self.t = initial_t
         self.x = initial_x.copy()
@@ -95,6 +100,7 @@ class Env(object):
         return info
 
     def step(self, u: np.ndarray) -> Dict[str, bool | float | np.ndarray]:
+        """シミュレーションの実行 (1ステップ)"""
         self.t, self.x = self.integral(self.t, self.x, u)
         done = self.t >= self.t_max
         info = {"t": self.t, "x": self.x.copy(), "done": done}
@@ -103,27 +109,35 @@ class Env(object):
 
 class MultiBodyEnv(Env):
     def compute_mass_matrix(self, t: float, x: np.ndarray) -> np.ndarray:
+        """質量行列の計算"""
         raise NotImplementedError()
 
     def compute_external_force(self, t: float, x: np.ndarray, u: np.ndarray) -> np.ndarray:
+        """外力の計算"""
         raise NotImplementedError()
 
     def compute_C(self, t: float, x: np.ndarray) -> np.ndarray:
+        """拘束条件の計算"""
         raise NotImplementedError()
 
     def compute_Ct(self, t: float, x: np.ndarray) -> np.ndarray:
+        """拘束条件の時間微分の計算"""
         raise NotImplementedError()
 
     def compute_Cq(self, t: float, x: np.ndarray) -> np.ndarray:
+        """拘束条件のヤコビ行列の計算"""
         raise NotImplementedError()
 
     def compute_Ctt(self, t: float, x: np.ndarray) -> np.ndarray:
+        """拘束条件の時間の2階微分の計算"""
         raise NotImplementedError()
 
     def compute_Cqt(self, t: float, x: np.ndarray) -> np.ndarray:
+        """拘束条件のヤコビ行列の時間微分の計算"""
         raise NotImplementedError()
 
     def compute_Cqdqq(self, t: float, x: np.ndarray) -> np.ndarray:
+        """(Cq * dq_dt)qの計算"""
         raise NotImplementedError()
 
     def get_independent_indices(self) -> List[int]:
@@ -131,6 +145,7 @@ class MultiBodyEnv(Env):
         raise NotImplementedError()
 
     def newton_raphson_method(self, t: float, x: np.ndarray) -> np.ndarray:
+        """ニュートンラフソン法"""
         pos_indices = list(range(0, len(x), 2))
         vel_indices = list(range(1, len(x), 2))
         independent_indices = self.get_independent_indices()
@@ -158,6 +173,7 @@ class MultiBodyEnv(Env):
         initial_x: np.ndarray,
         integral_method: str = "runge_kutta_method",
     ) -> Dict[str, bool | float | np.ndarray]:
+        """シミュレーションの初期化"""
         info = super().reset(initial_t, initial_x, integral_method)
         self.x = self.newton_raphson_method(self.t, self.x)
         C = self.compute_C(self.t, self.x)
@@ -165,6 +181,7 @@ class MultiBodyEnv(Env):
         return info
 
     def step(self, u) -> Dict[str, bool | float | np.ndarray]:
+        """シミュレーションの実行 (1ステップ)"""
         info = super().step(u)
         self.x = self.newton_raphson_method(self.t, self.x)
         C = self.compute_C(self.t, self.x)
@@ -182,10 +199,10 @@ class CartPoleEnv(MultiBodyEnv):
         l_pole: float = 1.0,
     ):
         super().__init__(t_max, dt)
-        self.m_cart = m_cart
-        self.m_ball = m_ball
-        self.l_pole = l_pole
-        self.g = 9.8
+        self.m_cart = m_cart  # カートの質量
+        self.m_ball = m_ball  # ポールの上部に取り付けられたボールの質量
+        self.l_pole = l_pole  # ポールの長さ
+        self.g = 9.8  # 重力加速度
 
     def compute_mass_matrix(self, t: float, x: np.ndarray) -> np.ndarray:
         M = np.zeros((6, 6), dtype=np.float64)
@@ -264,12 +281,14 @@ class FigureMaker(object):
         self.ax: Axes = None
 
     def reset(self):
+        """図作成ツールの初期化"""
         if self.ax is None:
             self.fig, self.ax = plt.subplots()
         else:
             self.ax.cla()
 
     def make(self, data: Dict[str, Dict[str, np.ndarray | List[Dict[str, np.ndarray]]]]):
+        """図の作成"""
         x = data.get("x")
         y = data.get("y")
         x_label = x.get("label", "")
@@ -284,23 +303,28 @@ class FigureMaker(object):
         self.ax.legend(loc="upper right")
 
     def save(self, savedir: str, savefile: str = "trajectory.png"):
+        """図の保存"""
         if self.fig is not None:
             savepath = os.path.join(savedir, savefile)
             self.fig.savefig(savepath, dpi=300)
 
     def close(self):
+        """matplotlibを閉じる"""
         plt.close()
 
 
 if __name__ == "__main__":
+    # シミュレーションの設定
     t_max = 10.0
     dt = 1e-3
     initial_t = 0.0
     initial_x = np.array([0.0, 0.0, 0.0, 0.0, 1.0, 0.0, np.pi / 2 - 0.05, 0.0], dtype=np.float64)
 
+    # シミュレーション環境の作成
     env = CartPoleEnv(t_max, dt=dt)
     buffer = Buffer()
 
+    # シミュレーションの実行
     info = env.reset(initial_t, initial_x)
     done = info.pop("done")
     buffer.reset()
@@ -311,15 +335,17 @@ if __name__ == "__main__":
         done = info.pop("done")
         buffer.push(info)
 
+    # データの保存
     savedir = "result"
     savefile = "trajectory.pickle"
     buffer.save(savedir, savefile)
 
+    # 図作成ツールの作成
     figure_maker = FigureMaker()
     data = buffer.get()
-    t = np.array(data.get("t"), dtype=np.float64)
 
     # 状態変数の時間発展の描画
+    t = np.array(data.get("t"), dtype=np.float64)
     independent_x = np.array(data.get("x"), dtype=np.float64)[:, [0, 1, 6, 7]]
     figure_data = {
         "x": {"label": "Time $t$ s", "value": t},
