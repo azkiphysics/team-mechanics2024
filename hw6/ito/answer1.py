@@ -249,8 +249,8 @@ class CartPoleEnv(MultiBodyEnv):
 
     def compute_C(self, t: float, x: np.ndarray) -> np.ndarray:
         C = np.zeros(2, dtype=np.float64)
-        C[0] = x[2] - x[0] - self.l_pole / 2.0 * np.cos(x[6])
-        C[1] = x[4] - self.l_pole / 2.0 * np.sin(x[6])
+        C[0] = x[2] - x[0] - self.l_pole * np.cos(x[6])
+        C[1] = x[4] - self.l_pole * np.sin(x[6])
         return C
 
     def compute_Ct(self, t: float, x: np.ndarray) -> np.ndarray:
@@ -260,9 +260,9 @@ class CartPoleEnv(MultiBodyEnv):
         Cq = np.zeros((2, 4), dtype=np.float64)
         Cq[0, 0] = -1.0
         Cq[0, 1] = 1.0
-        Cq[0, 3] = self.l_pole / 2.0 * np.sin(x[6])
+        Cq[0, 3] = self.l_pole * np.sin(x[6])
         Cq[1, 2] = 1.0
-        Cq[1, 3] = -self.l_pole / 2.0 * np.cos(x[6])
+        Cq[1, 3] = -self.l_pole * np.cos(x[6])
         return Cq
 
     def compute_Ctt(self, t: float, x: np.ndarray) -> np.ndarray:
@@ -273,8 +273,8 @@ class CartPoleEnv(MultiBodyEnv):
 
     def compute_Cqdqq(self, t: float, x: np.ndarray) -> np.ndarray:
         Cqdqq = np.zeros((2, 4), dtype=np.float64)
-        Cqdqq[0, 3] = x[7] * self.l_pole / 2.0 * np.cos(x[6])
-        Cqdqq[1, 3] = x[7] * self.l_pole / 2.0 * np.sin(x[6])
+        Cqdqq[0, 3] = x[7] * self.l_pole * np.cos(x[6])
+        Cqdqq[1, 3] = x[7] * self.l_pole * np.sin(x[6])
         return Cqdqq
 
     def get_independent_indices(self) -> List[int]:
@@ -323,8 +323,8 @@ class CartPoleEnv(MultiBodyEnv):
         pole_center = self.x[[2, 4]]
         theta = self.x[6]
         R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
-        initial_pole_upper_x = np.array([self.l_pole / 2.0, 0.0], dtype=np.float64)
-        initial_pole_lower_x = np.array([-self.l_pole / 2.0, 0.0], dtype=np.float64)
+        initial_pole_upper_x = np.array([0.0, 0.0], dtype=np.float64)
+        initial_pole_lower_x = np.array([-self.l_pole, 0.0], dtype=np.float64)
         pole_upper_x, pole_upper_y = pole_center + R @ initial_pole_upper_x
         pole_lower_x, pole_lower_y = pole_center + R @ initial_pole_lower_x
         self.ax.plot([pole_upper_x, pole_lower_x], [pole_upper_y, pole_lower_y], color="black", linewidth=2, zorder=1)
@@ -337,7 +337,7 @@ class CartPoleEnv(MultiBodyEnv):
         self.ax.fill_between(ball_x, ball_upper_y, ball_lower_y, color="red", zorder=2)
 
         self.ax.set_xlim(-5.0 * self.l_pole, 5.0 * self.l_pole)
-        self.ax.set_ylim(-0.5 * self.l_pole, 3.5 * self.l_pole)
+        self.ax.set_ylim(-3.5 * self.l_pole, 3.5 * self.l_pole)
         self.ax.set_axis_off()
 
         # 図の描画
@@ -416,7 +416,7 @@ if __name__ == "__main__":
     m_ball = 1.0
     l_pole = 1.0
     initial_t = 0.0
-    initial_x = np.array([0.0, 0.0, 0.0, 0.0, 0.5, 0.0, np.pi / 2 - 0.05, 0.0], dtype=np.float64)
+    initial_x = np.array([0.0, 0.0, 0.0, 0.0, 1.0, 0.0, np.pi / 2 - 0.05, 0.0], dtype=np.float64)
 
     # シミュレーション環境の作成
     env = CartPoleEnv(t_max, dt=dt, m_cart=m_cart, m_ball=m_ball, l_pole=l_pole)
