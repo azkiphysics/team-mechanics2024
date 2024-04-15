@@ -49,3 +49,19 @@ $$
 初期値 $t = t_0$ , $\boldsymbol{x} = \boldsymbol{x}_0$ から始めて，上式を繰り返し実行することにより，状態変数 $x$ の時間発展を求めることができます．
 
 ### ルンゲクッタ法
+ルンゲクッタ法は，常微分方程式 $\dot{\boldsymbol{x}} = \boldsymbol{f}(\boldsymbol{x})$ の数値解法の一つです．時刻 $t$ の状態変数 $\boldsymbol{x}(t)$ から時刻 $t + dt$ の状態変数 $\boldsymbol{x}(t + dt)$ を求めるために，以下の更新式を利用します．
+
+$$
+\boldsymbol{x}(t + dt) = \frac{dt}{6}(\boldsymbol{k}_1 + 2\boldsymbol{k}_2 + 2\boldsymbol{k}_3 + \boldsymbol{k}_4)
+$$
+
+$$
+\begin{eqnarray}
+    \boldsymbol{k}_1 &=& \boldsymbol{f}(\boldsymbol{x})\\
+    \boldsymbol{k}_2 &=& \boldsymbol{f}\Big(\boldsymbol{x} + \frac{dt}{2}\boldsymbol{k}_1 \Big)\\
+    \boldsymbol{k}_3 &=& \boldsymbol{f}\Big(\boldsymbol{x} + \frac{dt}{2}\boldsymbol{k}_2 \Big)\\
+    \boldsymbol{k}_4 &=& \boldsymbol{f}\Big(\boldsymbol{x} + dt\boldsymbol{k}_3 \Big)
+\end{eqnarray}
+$$
+
+初期値 $t = t_0$ , $\boldsymbol{x} = \boldsymbol{x}_0$ から始めて，上式を繰り返し実行することにより，状態変数 $x$ の時間発展を求めることができます．
