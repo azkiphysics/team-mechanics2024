@@ -338,22 +338,21 @@ class CartPoleEnv(MultiBodyEnv):
         self.ax.fill_between(wheel_right_x, wheel_upper_y, wheel_lower_y, color="black", zorder=1)
         self.ax.fill_between(wheel_left_x, wheel_upper_y, wheel_lower_y, color="black", zorder=1)
 
-        # 棒の描画
-        pole_center = self.x[[2, 4]]
-        theta = self.x[6]
-        R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
-        initial_pole_upper_x = np.array([0.0, 0.0], dtype=np.float64)
-        initial_pole_lower_x = np.array([-self.l_pole, 0.0], dtype=np.float64)
-        pole_upper_x, pole_upper_y = pole_center + R @ initial_pole_upper_x
-        pole_lower_x, pole_lower_y = pole_center + R @ initial_pole_lower_x
-        self.ax.plot([pole_upper_x, pole_lower_x], [pole_upper_y, pole_lower_y], color="black", linewidth=2, zorder=1)
-
         # 球の描画
-        ball_center = pole_center + R @ initial_pole_upper_x
+        ball_center = self.x[[2, 4]]
         ball_x = ball_center[0] + 0.1 * self.l_pole * np.cos(angle_upper)
         ball_upper_y = ball_center[1] + 0.1 * self.l_pole * np.sin(angle_upper)
         ball_lower_y = ball_center[1] + 0.1 * self.l_pole * np.sin(angle_lower)
         self.ax.fill_between(ball_x, ball_upper_y, ball_lower_y, color="red", zorder=2)
+
+        # 棒の描画
+        theta = self.x[6]
+        R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
+        initial_pole_upper_x = np.array([0.0, 0.0], dtype=np.float64)
+        initial_pole_lower_x = np.array([-self.l_pole, 0.0], dtype=np.float64)
+        pole_upper_x, pole_upper_y = ball_center + R @ initial_pole_upper_x
+        pole_lower_x, pole_lower_y = ball_center + R @ initial_pole_lower_x
+        self.ax.plot([pole_upper_x, pole_lower_x], [pole_upper_y, pole_lower_y], color="black", linewidth=2, zorder=1)
 
         # 図の描画
         self.fig.canvas.draw()
