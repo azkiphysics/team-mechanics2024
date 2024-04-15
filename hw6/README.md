@@ -25,7 +25,7 @@ $$
 \boldsymbol{f}(\boldsymbol{x}+\Delta x) \simeq \boldsymbol{f}(\boldsymbol{x}) + \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{x}}\Delta \boldsymbol{x}
 $$
 
-ニュートンラフソン法では，$\boldsymbol{f}(\boldsymbol{x}+\Delta x) = \boldsymbol{0}$ となるように $\Delta x$ を決定します．上式と $\boldsymbol{f}(\boldsymbol{x}+\Delta x) = \boldsymbol{0}$ を用いて $\Delta x$ を求めると，次のようになります．
+ニュートンラフソン法では, $\boldsymbol{f}(\boldsymbol{x}+\Delta x) = \boldsymbol{0}$ となるように $\Delta x$ を決定します．上式と $\boldsymbol{f}(\boldsymbol{x}+\Delta x) = \boldsymbol{0}$ を用いて $\Delta x$ を求めると，次のようになります．
 
 $$
 \Delta \boldsymbol{x} = -\Bigg(\frac{\partial \boldsymbol{f}}{\partial \boldsymbol{x}}\Bigg)^{-1}\boldsymbol{f}(\boldsymbol{x})
