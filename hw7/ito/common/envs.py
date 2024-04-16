@@ -6,6 +6,8 @@ import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 
+from utils import Box, Discrete
+
 
 class Env(object):
     """環境クラス (シミュレーション環境を作成するときは本クラスを親クラスとして実装する)"""
@@ -14,6 +16,8 @@ class Env(object):
         self.t_max = t_max
         self.dt = dt
 
+        self.observation_space: Box | Discrete = None
+        self.action_space: Box | Discrete = None
         self.t: float = None
         self.x: np.ndarray | None = None
         self.integral_method: str | None = None

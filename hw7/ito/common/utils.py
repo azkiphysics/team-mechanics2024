@@ -1,11 +1,26 @@
 import os
-from typing import Dict, List
+from typing import Dict, List, Sequence
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
+
+
+class Box(object):
+    def __init__(
+        self, low: float | np.ndarray, high: float | np.ndarray, shape: Sequence[int], dtype: np.float32 | np.float64
+    ) -> None:
+        self.low = low * np.ones_like(shape, dtype=dtype)
+        self.high = high * np.ones_like(shape, dtype=dtype)
+        self.shape = shape
+        self.dtype = dtype
+
+
+class Discrete(object):
+    def __init__(self, n: int) -> None:
+        self.n = n
 
 
 class FigureMaker(object):

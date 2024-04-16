@@ -5,9 +5,9 @@ from typing import Dict
 import matplotlib.pyplot as plt
 import numpy as np
 
+from common.agents import Agent
 from common.buffers import Buffer
 from common.envs import MultiBodyEnv, CartPoleEnv
-from common.utils import FigureMaker, MovieMaker
 
 # Matplotlibで綺麗な論文用のグラフを作る
 # https://qiita.com/MENDY/items/fe9b0c50383d8b2fd919
@@ -24,28 +24,41 @@ plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
 
 
 class Worker(object):
-    def __init__(self, env_cls: MultiBodyEnv, env_init_config: Dict[str, float]) -> None:
+    def __init__(
+        self,
+        env_cls: MultiBodyEnv,
+        env_init_config: Dict[str, float],
+        agent_cls: Agent,
+        agent_init_config: Dict[str],
+    ) -> None:
         self.env: MultiBodyEnv = env_cls(**env_init_config)
+        self.agent: Agent = agent_cls(self.env.observation_space, self.env.action_space, **agent_init_config)
         self.buffer = Buffer()
+
+        self.obs = None
         self.done: bool = False
 
-    def reset(self, env_reset_config: Dict[str, float | np.ndarray]):
+    def reset(self, env_reset_config: Dict[str, float | np.ndarray], agent_reset_config: Dict[str, float | np.ndarray]):
         info = self.env.reset(**env_reset_config)
+        self.agent.reset(**agent_reset_config)
         self.buffer.reset()
         self.buffer.push(info)
+        self.obs = info.get("obs")
+        self.done = info.get("truncated") or info.get("terminated")
 
     def run(self, n_steps: int | None = None) -> Dict[str, float | np.ndarray]:
         k_steps = 0
         while True:
             k_steps += 1
-            u = np.zeros(1, dtype=np.float64)
-            info = self.env.step(u)
-            info |= {"u": u}
-            done = info.get("done")
-            self.buffer.push(info)
-            if (k_steps is not None and k_steps == n_steps) or (k_steps is None and done):
+            action = self.agent.act(self.obs)
+            info = self.env.step(action)
+            self.obs = info.get("obs")
+            reward = info.get("reward")
+            self.done = info.get("truncated") or info.get("terminated")
+            self.buffer.push({"obs": self.obs, "action": action, "reward": reward, "done": self.done})
+            if (k_steps is not None and k_steps == n_steps) or (k_steps is None and self.done):
                 break
-            if done:
+            if self.done:
                 info = self.env.reset()
                 self.buffer.push(info)
         result = self.buffer.get()
