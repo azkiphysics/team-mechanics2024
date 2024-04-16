@@ -22,7 +22,6 @@
 4. Python文法 (ファイルの入出力)
 5. Python文法 (numpy, matplotlib)
 6. 数値計算法 (オイラー法, ルンゲクッタ法)
-7. 倒立振子のシミュレーション
 8. LQR制御
 9. 強化学習 (Q-learning, DQN)
 
