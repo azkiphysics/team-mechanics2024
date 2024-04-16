@@ -151,24 +151,22 @@ $$
 マルチボディシステムの微分代数方程式は以下の式で表されます．
 
 $$
-\begin{equation}
-    \begin{bmatrix}
-        \mathrm{M} & \boldsymbol{C}_{\boldsymbol{q}}^T\\
-        \boldsymbol{C}_{\boldsymbol{q}} & \boldsymbol{0}
-    \end{bmatrix}\begin{bmatrix}
-        \ddot{\boldsymbol{q}}\\
-        \boldsymbol{\lambda}
-    \end{bmatrix} = \begin{bmatrix}
-        \boldsymbol{Q}_e\\
-        \boldsymbol{Q}_d
-    \end{bmatrix}
-\end{equation}
+\begin{bmatrix}
+    \mathrm{M} & \boldsymbol{C}_{\boldsymbol{q}}^T\\
+    \boldsymbol{C}\_{\boldsymbol{q}} & \boldsymbol{0}
+\end{bmatrix}\begin{bmatrix}
+    \ddot{\boldsymbol{q}}\\
+    \boldsymbol{\lambda}
+\end{bmatrix} = \begin{bmatrix}
+    \boldsymbol{Q}_e\\
+    \boldsymbol{Q}_d
+\end{bmatrix}
 $$
 
 $\mathrm{M}$は質量慣性行列, $\boldsymbol{C}_{\boldsymbol{q}}$ は拘束条件式 $\boldsymbol{C}$ のヤコビ行列, $\boldsymbol{q}$ は一般座標, $\boldsymbol{\lambda}$ はラグランジュの未定乗数, $\boldsymbol{Q}_e$ は一般外力, $\boldsymbol{Q}_d$ は次式で定義されるベクトルとなります．
 
 $$
-\boldsymbol{Q}_d = -\boldsymbol{C}_{tt} - (\boldsymbol{C}_{\boldsymbol{q}}\dot{\boldsymbol{q}})_{\boldsymbol{q}}\dot{\boldsymbol{q}} - 2\boldsymbol{C}_{\boldsymbol{q}t}\dot{\boldsymbol{q}}
+\boldsymbol{Q}\_d = -\boldsymbol{C}\_{tt} - (\boldsymbol{C}\_{\boldsymbol{q}}\dot{\boldsymbol{q}})\_{\boldsymbol{q}}\dot{\boldsymbol{q}} - 2\boldsymbol{C}\_{\boldsymbol{q}t}\dot{\boldsymbol{q}}
 $$
 
 Cart pole問題では，上記のベクトル，行列はそれぞれ以下のように表されます．
@@ -200,7 +198,7 @@ $$
 $$
 
 $$
-\boldsymbol{C}_{\boldsymbol{q}} = \begin{bmatrix}
+\boldsymbol{C}\_{\boldsymbol{q}} = \begin{bmatrix}
     -1 & 1 & 0 & l_{\mathrm{pole}}\sin(\theta_{\mathrm{pole}})\\
     0 & 0 & 1 & -l_{\mathrm{pole}}\cos(\theta_{\mathrm{pole}})
 \end{bmatrix}
@@ -221,8 +219,8 @@ $$
 $$
 
 $$
-(\boldsymbol{C}_{\boldsymbol{q}}\dot{\boldsymbol{q}})_{\boldsymbol{q}} = \begin{bmatrix}
-    0 & 0 & 0 & l_{\mathrm{pole}}\dot{\theta}_{\mathrm{pole}}\cos(\theta_{\mathrm{pole}})\\
-    0 & 0 & 0 & l_{\mathrm{pole}}\dot{\theta}_{\mathrm{pole}}\sin(\theta_{\mathrm{pole}})
+(\boldsymbol{C}\_{\boldsymbol{q}}\dot{\boldsymbol{q}})\_{\boldsymbol{q}} = \begin{bmatrix}
+    0 & 0 & 0 & l_{\mathrm{pole}}\dot{\theta}\_{\mathrm{pole}}\cos(\theta_{\mathrm{pole}})\\
+    0 & 0 & 0 & l_{\mathrm{pole}}\dot{\theta}\_{\mathrm{pole}}\sin(\theta_{\mathrm{pole}})
 \end{bmatrix}
 $$
