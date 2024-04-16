@@ -70,6 +70,31 @@ $$
 初期値 $t = t_0$ , $\boldsymbol{x} = \boldsymbol{x}_0$ から始めて，上式を繰り返し実行することにより，状態変数 $\boldsymbol{x}$ の時間発展を求めることができます．
 
 ## 補足
+### argparseモジュール
+argparseモジュールは，コマンドライン引数をもつプログラムを実行する時 (e.g., `python answer1.py runge_kutta_method`)に使用します．(`runge_kutta_method`がコマンドライン引数に対応します)
+
+Pythonで引数をもつプログラムを実行するために，まず`argparse`をインポートします．
+
+```python
+import argparse
+```
+
+そして，引数解析器 (パーサー)クラス`argparse.ArgumentParser`のインスタンスを次のように定義します．
+
+```python
+parser = argparse.ArgumentParser()
+```
+
+変数`parser`はコマンドライン引数の仕様をまとめたものとなっています．デフォルトでは引数の仕様は何も定義されていないので，`add_argument`メソッドを利用して引数の仕様を追加します．例えば，本課題のように数値積分手法をコマンドプロンプト上で変更できるようにするため，`integral_method`という引数を追加したい場合，次のように記述します．
+
+```python
+parser.add_argument("integral_method", choices=["euler_method", "runge_kutta_method"])
+```
+
+今回は，数値積分法としてオイラー法とルンゲクッタ法の2つの手法を利用するので，`add_argument`のキーワード引数`choices`に`["euler_method", "runge_kutta_method"]`を入力します．このように記述することで，コマンドライン引数に`choices`で指定したリストの要素以外の文字列が入力されると，エラーが出力されます．
+
+より詳しく知りたい方は[argparse --- コマンドラインオプション、引数、サブコマンドのパーサー](https://docs.python.org/ja/3.11/library/argparse.html)をご参照ください．
+
 ### 型アノテーション
 型アノテーションは，変数や関数，メソッドの引数，戻り値のデータの型を明示するための構文になります．型アノテーションを利用することで，コードが読みやすくなりバグが少なくなるため，チームで開発する際は必須の構文です．
 
@@ -148,6 +173,8 @@ $$
 この更新式を $\||\Delta\boldsymbol{x}\|| < \epsilon$ ($\epsilon$ : 閾値)となるまで繰り返し適用し，解を求めます．
 
 ### Cart pole問題の運動方程式
+![](ito/cart_pole.png)
+
 マルチボディシステムの微分代数方程式は以下の式で表されます．
 
 $$
@@ -169,8 +196,7 @@ $$
 \boldsymbol{Q}\_d = -\boldsymbol{C}\_{tt} - (\boldsymbol{C}\_{\boldsymbol{q}}\dot{\boldsymbol{q}})\_{\boldsymbol{q}}\dot{\boldsymbol{q}} - 2\boldsymbol{C}\_{\boldsymbol{q}t}\dot{\boldsymbol{q}}
 $$
 
-Cart pole問題では，上記のベクトル，行列はそれぞれ以下のように表されます．
-
+Cart pole問題では，上記のベクトル，行列はそれぞれ以下のように定義します．カートとボール，ポールの変数はいずれも図1に記載しています．
 
 $$
 \boldsymbol{q} = \begin{bmatrix}
