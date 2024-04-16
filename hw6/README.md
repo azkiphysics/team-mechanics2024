@@ -172,8 +172,7 @@ $$
 
 この更新式を $\||\Delta\boldsymbol{x}\|| < \epsilon$ ($\epsilon$ : 閾値)となるまで繰り返し適用し，解を求めます．
 
-
-### マルチボディダイナミクスの運動方程式
+### マルチボディシステムの運動方程式
 マルチボディシステムの微分代数方程式は以下の式で表されます．
 
 $$
@@ -195,10 +194,53 @@ $$
 \boldsymbol{Q}\_d = -\boldsymbol{C}\_{tt} - (\boldsymbol{C}\_{\boldsymbol{q}}\dot{\boldsymbol{q}})\_{\boldsymbol{q}}\dot{\boldsymbol{q}} - 2\boldsymbol{C}\_{\boldsymbol{q}t}\dot{\boldsymbol{q}}
 $$
 
-### Cart pole問題の運動方程式
+上記の微分代数方程式から求めた加速度を利用して，オイラー法もしくはルンゲクッタ法により，次のステップの独立変数の値を求めます．
+
+マルチボディシステムの従属変数については，上で計算した独立変数を用いて，拘束条件式 $\boldsymbol{C} = 0$ と拘束条件の時間微分した式 $\boldsymbol{C}\_{\boldsymbol{q}}\dot{\boldsymbol{q}} = \boldsymbol{0}$ を満たすように値を決定します．拘束条件式 $\boldsymbol{C} = 0$ を満たすために，ニュートンラフソン法を利用します．更新式は以下のとおりです．
+
+$$
+\boldsymbol{q} \leftarrow \boldsymbol{q} + \Delta\boldsymbol{q}
+$$
+
+$$
+\begin{bmatrix}
+\boldsymbol{C}\_{\boldsymbol{q}}\\
+\boldsymbol{I}\_d
+\end{bmatrix}\Delta\boldsymbol{q} = \begin{bmatrix}
+-\boldsymbol{C}\\
+\boldsymbol{0}
+\end{bmatrix}
+$$
+
+ここで, $\boldsymbol{I}\_d$ は，独立座標に対応する要素が1, それ以外は0となるブーリアン行列を表しています．このような行列を定義してあげることで，独立座標の更新量が0となり．従属座標のみの更新が可能となります．
+
+また，拘束条件の時間微分した式 $\boldsymbol{C}\_{\boldsymbol{q}}\dot{\boldsymbol{q}} = \boldsymbol{0}$ を満たすために，以下の式を解いて従属座標の速度を求めます．
+
+$$
+\begin{bmatrix}
+\boldsymbol{C}\_{\boldsymbol{q}}\\
+\boldsymbol{I}\_d
+\end{bmatrix}\dot{\boldsymbol{q}} = \begin{bmatrix}
+-\boldsymbol{C}\_t\\
+\dot{\boldsymbol{q}}_t
+\end{bmatrix}
+$$
+
+より詳しい説明については，[Computational dynamics](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470686850)の第6章"Constrained dynamics"をご確認ください．
+
+### マルチボディシステムの数値計算
+マルチボディダイナミクスは以下の手順で数値計算が行われます．
+1. 初期条件の推定値を設定する．
+2. 初期座標を利用して, $\boldsymbol{C}$ のヤコビ行列を計算し，LU分解により独立座標と従属座標を特定する．(本課題では，事前に独立座標を定義しておく)
+3. 独立座標の値を利用して，ニュートンラフソン法により従属座標を計算する．
+4. 一般座標を利用して，微分代数方程式から一般座標の加速度を計算する．
+5. 一般座標の加速度を利用して，オイラー法もしくはルンゲクッタ法により独立座標の位置と速度を計算する．
+6. 3を行った後，シミュレーション時間に達していれば終了，そうでなければ4に進む．
+
+### Cart pole問題
 ![](ito/cart_pole.png)
 
-Cart pole問題では，[マルチボディダイナミクスの運動方程式](#マルチボディダイナミクスの運動方程式)で述べたベクトル，行列はそれぞれ以下のように定義します．Cart poleの変数はいずれも図1に記載しています．
+Cart pole問題では，[マルチボディシステムの運動方程式](#マルチボディシステムの運動方程式)で述べたベクトル，行列をそれぞれ以下のように定義します．Cart poleの変数はいずれも図1に記載しています．ここで, $g$ は重力加速度, $F$ はカートに与える外力を表します．本課題では数値計算手法の精度を比較するために, $F = 0$ としています．
 
 $$
 \boldsymbol{q} = \begin{bmatrix}
@@ -220,9 +262,25 @@ M = \begin{bmatrix}
 $$
 
 $$
+\boldsymbol{Q}_e = \begin{bmatrix}
+F\\
+0\\
+-m\_{\mathrm{ball}}g\\
+0
+\end{bmatrix}
+$$
+
+$$
 \boldsymbol{C} = \begin{bmatrix}
     x_{\mathrm{ball}} - x_{\mathrm{cart}} - l_{\mathrm{pole}}\cos(\theta_{\mathrm{pole}})\\
     y_{\mathrm{ball}} - l_{\mathrm{pole}}\sin(\theta_{\mathrm{pole}})
+\end{bmatrix}
+$$
+
+$$
+\boldsymbol{C}_{t} = \begin{bmatrix}
+    0\\
+    0
 \end{bmatrix}
 $$
 
