@@ -302,8 +302,11 @@ class CartPoleEnv(MultiBodyEnv):
         M = self.compute_mass_matrix(t, x)
         Q = self.compute_external_force(t, x, u)
         q_lam = np.linalg.inv(M) @ Q
-        dx_dt[[0, 2, 4, 6]] = x[[1, 3, 5, 7]].copy()
-        dx_dt[[1, 3, 5, 7]] = q_lam[:4].copy()
+        independent_indices = self.get_independent_indices()
+        independent_pos_indices = [2 * idx for idx in independent_indices]
+        independent_vel_indices = [2 * idx + 1 for idx in independent_indices]
+        dx_dt[independent_pos_indices] = x[independent_vel_indices].copy()
+        dx_dt[independent_vel_indices] = q_lam[:4][independent_indices].copy()
         return dx_dt
 
     def compute_energy(self, x: np.ndarray) -> float:
