@@ -95,7 +95,7 @@ class Env(object):
         """運動方程式"""
         raise NotImplementedError()
 
-    def compute_energy(self, x: np.ndarray) -> float:
+    def compute_energy(self, t: float, x: np.ndarray) -> float:
         """全エネルギーの計算"""
         raise NotImplementedError()
 
@@ -110,7 +110,7 @@ class Env(object):
         self.t = initial_t
         self.x = initial_x.copy()
         done = self.t >= self.t_max
-        e = self.compute_energy(self.x)
+        e = self.compute_energy(self.t, self.x)
         info = {"t": self.t, "x": self.x.copy(), "e": e, "done": done}
         return info
 
@@ -118,7 +118,7 @@ class Env(object):
         """シミュレーションの実行 (1ステップ)"""
         self.t, self.x = self.integral(self.t, self.x, u)
         done = self.t >= self.t_max
-        e = self.compute_energy(self.x)
+        e = self.compute_energy(self.t, self.x)
         info = {"t": self.t, "x": self.x.copy(), "e": e, "done": done}
         return info
 
@@ -162,16 +162,35 @@ class MultiBodyEnv(Env):
         """(Cq * dq_dt)qの計算"""
         raise NotImplementedError()
 
-    def get_independent_indices(self) -> List[int]:
-        """独立変数のインデックスの取得 (位置座標qのインデックスを利用している)"""
+    def get_coordinate_indices(self) -> List[int]:
+        """一般座標のインデックスの取得"""
         raise NotImplementedError()
+
+    def get_independent_coordinate_indices(self) -> List[int]:
+        """独立一般座標のインデックスの取得"""
+        raise NotImplementedError()
+
+    def get_velocity_indices(self) -> List[int]:
+        """一般速度のインデックスの取得"""
+        n_coordinates = len(self.get_coordinate_indices())
+        return list(range(n_coordinates, 2 * n_coordinates))
+
+    def get_independent_velocity_indices(self) -> List[int]:
+        """独立一般速度のインデックスの取得"""
+        n_coordinates = len(self.get_coordinate_indices())
+        return [n_coordinates + idx for idx in self.get_independent_coordinate_indices()]
+
+    def get_state_indices(self) -> List[int]:
+        """状態変数のインデックスの取得"""
+        return self.get_independent_coordinate_indices() + self.get_independent_velocity_indices()
 
     def newton_raphson_method(self, t: float, x: np.ndarray) -> np.ndarray:
         """ニュートンラフソン法"""
-        pos_indices = list(range(0, len(x), 2))
-        vel_indices = list(range(1, len(x), 2))
-        independent_indices = self.get_independent_indices()
-        Id = np.identity(4, dtype=np.float64)[independent_indices]
+        pos_indices = self.get_coordinate_indices()
+        vel_indices = self.get_velocity_indices()
+        independent_pos_indices = self.get_independent_coordinate_indices()
+        independent_vel_indices = self.get_independent_velocity_indices()
+        Id = np.identity(4, dtype=np.float64)[independent_pos_indices]
         while True:
             prev_x = x.copy()
             C = self.compute_C(t, x)
@@ -185,7 +204,7 @@ class MultiBodyEnv(Env):
         Ct = self.compute_Ct(t, x)
         Cq = self.compute_Cq(t, x)
         F = np.concatenate([Cq, Id], axis=0)
-        f = np.concatenate([-Ct, x[vel_indices][independent_indices]])
+        f = np.concatenate([-Ct, x[independent_vel_indices]])
         x[vel_indices] = np.linalg.inv(F) @ f
         return x
 
@@ -199,7 +218,7 @@ class MultiBodyEnv(Env):
         start = time.time()
         info = super().reset(initial_t, initial_x, integral_method)
         self.x = self.newton_raphson_method(self.t, self.x)
-        e = self.compute_energy(self.x)
+        e = self.compute_energy(self.t, self.x)
         C = self.compute_C(self.t, self.x)
         end = time.time()
         calc_speed = end - start
@@ -211,7 +230,7 @@ class MultiBodyEnv(Env):
         start = time.time()
         info = super().step(u)
         self.x = self.newton_raphson_method(self.t, self.x)
-        e = self.compute_energy(self.x)
+        e = self.compute_energy(self.t, self.x)
         C = self.compute_C(self.t, self.x)
         end = time.time()
         calc_speed = end - start
@@ -237,6 +256,8 @@ class CartPoleEnv(MultiBodyEnv):
         self.g = 9.8  # 重力加速度
 
     def compute_mass_matrix(self, t: float, x: np.ndarray) -> np.ndarray:
+        theta_pole = x[3]
+
         M = np.zeros((6, 6), dtype=np.float64)
         M[0, 0] = self.m_cart
         M[0, 4] = -1.0
@@ -244,20 +265,21 @@ class CartPoleEnv(MultiBodyEnv):
         M[1, 4] = 1.0
         M[2, 2] = self.m_ball
         M[2, 5] = 1.0
-        M[3, 4] = self.l_pole * np.sin(x[6])
-        M[3, 5] = -self.l_pole * np.cos(x[6])
+        M[3, 4] = self.l_pole * np.sin(theta_pole)
+        M[3, 5] = -self.l_pole * np.cos(theta_pole)
         M[4, 0] = -1.0
         M[4, 1] = 1.0
-        M[4, 3] = self.l_pole * np.sin(x[6])
+        M[4, 3] = self.l_pole * np.sin(theta_pole)
         M[5, 2] = 1.0
-        M[5, 3] = -self.l_pole * np.cos(x[6])
+        M[5, 3] = -self.l_pole * np.cos(theta_pole)
         return M
 
     def compute_external_force(self, t: float, x: np.ndarray, u: np.ndarray) -> np.ndarray:
+        dq = x[4:]
+
         Q = np.zeros(6, dtype=np.float64)
         Q[0] = u[0]
         Q[2] = -self.m_ball * self.g
-        dq = x[[1, 3, 5, 7]]
         Ctt = self.compute_Ctt(t, x)
         Cqdqq = self.compute_Cqdqq(t, x)
         Cqt = self.compute_Cqt(t, x)
@@ -265,21 +287,25 @@ class CartPoleEnv(MultiBodyEnv):
         return Q
 
     def compute_C(self, t: float, x: np.ndarray) -> np.ndarray:
+        x_cart, x_ball, y_ball, theta_pole = x[:4]
+
         C = np.zeros(2, dtype=np.float64)
-        C[0] = x[2] - x[0] - self.l_pole * np.cos(x[6])
-        C[1] = x[4] - self.l_pole * np.sin(x[6])
+        C[0] = x_ball - x_cart - self.l_pole * np.cos(theta_pole)
+        C[1] = y_ball - self.l_pole * np.sin(theta_pole)
         return C
 
     def compute_Ct(self, t: float, x: np.ndarray) -> np.ndarray:
         return np.zeros(2, dtype=np.float64)
 
     def compute_Cq(self, t: float, x: np.ndarray) -> np.ndarray:
+        theta_pole = x[3]
+
         Cq = np.zeros((2, 4), dtype=np.float64)
         Cq[0, 0] = -1.0
         Cq[0, 1] = 1.0
-        Cq[0, 3] = self.l_pole * np.sin(x[6])
+        Cq[0, 3] = self.l_pole * np.sin(theta_pole)
         Cq[1, 2] = 1.0
-        Cq[1, 3] = -self.l_pole * np.cos(x[6])
+        Cq[1, 3] = -self.l_pole * np.cos(theta_pole)
         return Cq
 
     def compute_Ctt(self, t: float, x: np.ndarray) -> np.ndarray:
@@ -289,32 +315,38 @@ class CartPoleEnv(MultiBodyEnv):
         return np.zeros((2, 4), dtype=np.float64)
 
     def compute_Cqdqq(self, t: float, x: np.ndarray) -> np.ndarray:
+        theta_pole, theta_dot_pole = x[[3, 7]]
+
         Cqdqq = np.zeros((2, 4), dtype=np.float64)
-        Cqdqq[0, 3] = x[7] * self.l_pole * np.cos(x[6])
-        Cqdqq[1, 3] = x[7] * self.l_pole * np.sin(x[6])
+        Cqdqq[0, 3] = theta_dot_pole * self.l_pole * np.cos(theta_pole)
+        Cqdqq[1, 3] = theta_dot_pole * self.l_pole * np.sin(theta_pole)
         return Cqdqq
 
-    def get_independent_indices(self) -> List[int]:
+    def get_coordinate_indices(self) -> List[int]:
+        return list(range(4))
+
+    def get_independent_coordinate_indices(self) -> List[int]:
         return [0, 3]
 
     def motion_equation(self, t: float, x: np.ndarray, u: np.ndarray):
+        independent_pos_indices = self.get_independent_coordinate_indices()
+        independent_vel_indices = [4 + idx for idx in independent_pos_indices]
+
         dx_dt = np.zeros(8, dtype=np.float64)
         M = self.compute_mass_matrix(t, x)
         Q = self.compute_external_force(t, x, u)
-        q_lam = np.linalg.inv(M) @ Q
-        independent_indices = self.get_independent_indices()
-        independent_pos_indices = [2 * idx for idx in independent_indices]
-        independent_vel_indices = [2 * idx + 1 for idx in independent_indices]
+        ddq_lam = np.linalg.inv(M) @ Q
         dx_dt[independent_pos_indices] = x[independent_vel_indices].copy()
-        dx_dt[independent_vel_indices] = q_lam[:4][independent_indices].copy()
+        dx_dt[independent_vel_indices] = ddq_lam[independent_pos_indices].copy()
         return dx_dt
 
-    def compute_energy(self, x: np.ndarray) -> float:
-        vx1 = x[1]
-        vx2 = x[3]
-        y2 = x[4]
-        vy2 = x[5]
-        return 0.5 * self.m_cart * vx1**2 + 0.5 * self.m_ball * (vx2**2 + vy2**2) + self.m_ball * self.g * y2
+    def compute_energy(self, t: float, x: np.ndarray) -> float:
+        y_ball, vx_cart, vx_ball, vy_ball = x[[2, 4, 5, 6]]
+        return (
+            0.5 * self.m_cart * vx_cart**2
+            + 0.5 * self.m_ball * (vx_ball**2 + vy_ball**2)
+            + self.m_ball * self.g * y_ball
+        )
 
     def render(self) -> np.ndarray:
         if self.fig is None:
@@ -324,6 +356,10 @@ class CartPoleEnv(MultiBodyEnv):
         self.ax.set_ylim(-1.5 * self.l_pole, 1.5 * self.l_pole)
         self.ax.set_axis_off()
         self.ax.set_aspect("equal")
+
+        cart_center_x = self.x[0]
+        ball_center = self.x[1:3]
+        theta_pole = self.x[3]
 
         # 球体オブジェクト描画用角度配列
         angle_upper = np.linspace(0.0, np.pi, 100)
@@ -335,30 +371,29 @@ class CartPoleEnv(MultiBodyEnv):
         self.ax.plot(horizon_x, horizon_y, color="black")
 
         # カートの描画
-        x1 = self.x[0]
-        cart_x = np.linspace(-0.15 * self.l_pole + x1, 0.15 * self.l_pole + x1, 100)
+        cart_x = np.linspace(-0.15 * self.l_pole + cart_center_x, 0.15 * self.l_pole + cart_center_x, 100)
         cart_y_upper = 0.1 * self.l_pole * np.ones_like(cart_x, dtype=np.float64)
         cart_y_lower = -0.1 * self.l_pole * np.ones_like(cart_x, dtype=np.float64)
         self.ax.fill_between(cart_x, cart_y_upper, cart_y_lower, color="blue", zorder=0)
 
         # 車輪の描画
-        wheel_right_x = x1 + self.l_pole * (0.1 + 0.05 * np.cos(angle_upper))
-        wheel_left_x = x1 + self.l_pole * (-0.1 + 0.05 * np.cos(angle_upper))
+        wheel_right_x = cart_center_x + self.l_pole * (0.1 + 0.05 * np.cos(angle_upper))
+        wheel_left_x = cart_center_x + self.l_pole * (-0.1 + 0.05 * np.cos(angle_upper))
         wheel_upper_y = self.l_pole * (-0.15 + 0.05 * np.sin(angle_upper))
         wheel_lower_y = self.l_pole * (-0.15 + 0.05 * np.sin(angle_lower))
         self.ax.fill_between(wheel_right_x, wheel_upper_y, wheel_lower_y, color="black", zorder=1)
         self.ax.fill_between(wheel_left_x, wheel_upper_y, wheel_lower_y, color="black", zorder=1)
 
         # 球の描画
-        ball_center = self.x[[2, 4]]
         ball_x = ball_center[0] + 0.1 * self.l_pole * np.cos(angle_upper)
         ball_upper_y = ball_center[1] + 0.1 * self.l_pole * np.sin(angle_upper)
         ball_lower_y = ball_center[1] + 0.1 * self.l_pole * np.sin(angle_lower)
         self.ax.fill_between(ball_x, ball_upper_y, ball_lower_y, color="red", zorder=2)
 
         # 棒の描画
-        theta = self.x[6]
-        R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
+        R = np.array(
+            [[np.cos(theta_pole), -np.sin(theta_pole)], [np.sin(theta_pole), np.cos(theta_pole)]], dtype=np.float64
+        )
         initial_pole_upper_x = np.array([0.0, 0.0], dtype=np.float64)
         initial_pole_lower_x = np.array([-self.l_pole, 0.0], dtype=np.float64)
         pole_upper_x, pole_upper_y = ball_center + R @ initial_pole_upper_x
@@ -448,7 +483,7 @@ if __name__ == "__main__":
     m_ball = 1.0
     l_pole = 1.0
     initial_t = 0.0
-    initial_x = np.array([0.0, 0.0, 0.0, 0.0, 1.0, 0.0, np.pi / 2 - 0.1, 0.0], dtype=np.float64)
+    initial_x = np.array([0.0, 0.0, 1.0, np.pi / 2 - 0.1, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
     integral_method = parser.integral_method
 
     # シミュレーション環境の作成
@@ -483,18 +518,19 @@ if __name__ == "__main__":
     figure_maker = FigureMaker()
     data = buffer.get()
 
-    # 状態変数の時間発展の描画
+    # 独立変数の時間発展の描画
     t = np.array(data.get("t"), dtype=np.float64)
-    independent_x = np.array(data.get("x"), dtype=np.float64)[:, [0, 1, 6, 7]]
+    independent_state_indices = env.get_state_indices()
+    independent_x = np.array(data.get("x"), dtype=np.float64)[:, independent_state_indices]
     figure_data = {
         "x": {"label": "Time $t$ (s)", "value": t},
         "y": {
-            "label": "State",
+            "label": "Independent coordinates and velocities",
             "value": [
-                {"label": "$x$", "value": independent_x[:, 0]},
-                {"label": "$v_x$", "value": independent_x[:, 1]},
-                {"label": "$\\theta$", "value": independent_x[:, 2]},
-                {"label": "$\\omega$", "value": independent_x[:, 3]},
+                {"label": "$x_{\\mathrm{cart}}$", "value": independent_x[:, 0]},
+                {"label": "$\\theta_{\\mathrm{cart}}$", "value": independent_x[:, 1]},
+                {"label": "$v_{\\mathrm{cart}}$", "value": independent_x[:, 2]},
+                {"label": "$\\omega_{\\mathrm{cart}}$", "value": independent_x[:, 3]},
             ],
         },
     }
