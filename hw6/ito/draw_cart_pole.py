@@ -17,10 +17,11 @@ if __name__ == "__main__":
     env.render()
     env.ax.plot([env.x[0]] * 2, [0, -0.2], linestyle="dashed", color="black")
     env.ax.plot([env.x[1]] * 2, [env.x[2], -0.2], linestyle="dashed", color="black")
-    env.ax.plot([env.x[0] + 0.3, -0.6], [0] * 2, linestyle="dashed", color="black")
+    env.ax.plot([env.x[0] + 0.25, -0.6], [0] * 2, linestyle="dashed", color="black")
     env.ax.plot([env.x[1], -0.6], [env.x[2]] * 2, linestyle="dashed", color="black")
     env.ax.plot([-0.6] * 2, [-0.4, env.x[2] + 0.2], color="black")
     env.ax.plot(0.22 * np.cos(np.linspace(0, env.x[3], 10)), 0.22 * np.sin(np.linspace(0, env.x[3], 10)), color="black")
+    env.ax.quiver(env.x[0], 0.0, 0.25, 0.0, scale=1.0, color="black")
     texts = [
         {"pos": env.x[[1, 2]] / 2.0 + np.array([-0.23, 0.0]), "text": "$l_{\\mathrm{pole}}$"},
         {"pos": env.x[[1, 2]] + np.array([0.12, 0.0]), "text": "$m_{\\mathrm{ball}}$"},
@@ -33,6 +34,7 @@ if __name__ == "__main__":
             "pos": 0.22 * np.array([np.cos(env.x[3] / 1.4), np.sin(env.x[3] / 1.4)]),
             "text": "$\\theta_{\\mathrm{pole}}$",
         },
+        {"pos": np.array([0.51, -0.03]), "text": "$F$"},
     ]
     for text in texts:
         env.ax.text(*text["pos"], text["text"], color="black", fontsize=25)
