@@ -172,9 +172,8 @@ $$
 
 この更新式を $\||\Delta\boldsymbol{x}\|| < \epsilon$ ($\epsilon$ : 閾値)となるまで繰り返し適用し，解を求めます．
 
-### Cart pole問題の運動方程式
-![](ito/cart_pole.png)
 
+### マルチボディダイナミクスの運動方程式
 マルチボディシステムの微分代数方程式は以下の式で表されます．
 
 $$
@@ -196,7 +195,10 @@ $$
 \boldsymbol{Q}\_d = -\boldsymbol{C}\_{tt} - (\boldsymbol{C}\_{\boldsymbol{q}}\dot{\boldsymbol{q}})\_{\boldsymbol{q}}\dot{\boldsymbol{q}} - 2\boldsymbol{C}\_{\boldsymbol{q}t}\dot{\boldsymbol{q}}
 $$
 
-Cart pole問題では，上記のベクトル，行列はそれぞれ以下のように定義します．カートとボール，ポールの変数はいずれも図1に記載しています．
+### Cart pole問題の運動方程式
+![](ito/cart_pole.png)
+
+Cart pole問題では，[マルチボディダイナミクスの運動方程式](#マルチボディダイナミクスの運動方程式)で述べたベクトル，行列はそれぞれ以下のように定義します．Cart poleの変数はいずれも図1に記載しています．
 
 $$
 \boldsymbol{q} = \begin{bmatrix}
@@ -212,6 +214,7 @@ $$
 M = \begin{bmatrix}
     m_{\mathrm{cart}} & 0 & 0 & 0\\
     0 & m_{\mathrm{ball}} & 0 & 0\\
+    0 & 0 & m_{\mathrm{ball}} & 0\\
     0 & 0 & 0 & 0
 \end{bmatrix}
 $$
