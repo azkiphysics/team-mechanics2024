@@ -8,6 +8,7 @@ from common.agents import Agent, ZeroAgent
 from common.buffers import Buffer
 from common.envs import Env, CartPoleEnv
 from common.utils import MovieMaker
+from common.wrappers import LQRMultiBodyEnvWrapper
 
 # Matplotlibで綺麗な論文用のグラフを作る
 # https://qiita.com/MENDY/items/fe9b0c50383d8b2fd919
@@ -35,6 +36,7 @@ class Runner(object):
         self.buffer_config = buffer_config
 
         self.env: Env = env_config["class"](**env_config["init"])
+        self.env = LQRMultiBodyEnvWrapper(self.env)
         self.agent: Agent = agent_config["class"](
             self.env.observation_space, self.env.action_space, **agent_config["init"]
         )
@@ -107,7 +109,7 @@ class Runner(object):
 
         # 動画の保存
         savefile = "evaluate_result.mp4"
-        self.movie_maker.make(savedir, self.env.t_max, savefile=savefile)
+        self.movie_maker.make(savedir, self.env.unwrapped.t_max, savefile=savefile)
 
 
 if __name__ == "__main__":
@@ -119,7 +121,14 @@ if __name__ == "__main__":
     env_config = {
         "class": CartPoleEnv,
         "init": {"t_max": 10.0, "dt": 1e-3, "m_cart": 1.0, "m_ball": 1.0, "l_pole": 1.0},
-        "reset": {"initial_t": 0.0, "initial_x": initial_x, "integral_method": "runge_kutta_method"},
+        "reset": {
+            "initial_t": 0.0,
+            "initial_x": initial_x,
+            "integral_method": "runge_kutta_method",
+            "target_x": np.array([1.0, 0.0, 1.0, np.pi / 2, 0.0, 0.0, 0.0, 0.0], dtype=np.float64),
+            "Q": 1.0,
+            "R": 1.0,
+        },
     }
 
     # エージェントの設定
