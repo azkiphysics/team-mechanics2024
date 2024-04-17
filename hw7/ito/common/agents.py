@@ -1,6 +1,6 @@
 import numpy as np
 
-from utils import Box, Discrete
+from .utils import Box, Discrete
 
 
 class Agent(object):

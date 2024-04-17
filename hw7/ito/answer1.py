@@ -1,5 +1,4 @@
 import argparse
-from collections import defaultdict
 from typing import Dict
 
 import matplotlib.pyplot as plt
@@ -8,6 +7,7 @@ import numpy as np
 from common.agents import Agent, ZeroAgent
 from common.buffers import Buffer
 from common.envs import Env, CartPoleEnv
+from common.utils import MovieMaker
 
 # Matplotlibで綺麗な論文用のグラフを作る
 # https://qiita.com/MENDY/items/fe9b0c50383d8b2fd919
@@ -26,32 +26,36 @@ plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
 class Runner(object):
     def __init__(
         self,
-        env_cls: Env,
-        env_config: Dict[str, Dict[str, int | float]],
-        agent_cls: Agent,
-        agent_config: Dict[str, Dict[str, int | float]],
+        env_config: Dict[str, Env | Dict[str, int | float]],
+        agent_config: Dict[str, Agent | Dict[str, int | float]],
+        buffer_config: Dict[str, Buffer | Dict[str, int]],
     ) -> None:
-        self.env_cls = env_cls
         self.env_config = env_config
-        self.agent_cls = agent_cls
         self.agent_config = agent_config
+        self.buffer_config = buffer_config
 
-        self.env: Env = env_cls(**env_config["init"])
-        self.agent: Agent = agent_cls(self.env.observation_space, self.env.action_space, **agent_config["init"])
-        self.buffer = Buffer()
+        self.env: Env = env_config["class"](**env_config["init"])
+        self.agent: Agent = agent_config["class"](
+            self.env.observation_space, self.env.action_space, **agent_config["init"]
+        )
+        self.buffer: Buffer = buffer_config["class"](**buffer_config["init"])
+        self.run_result = Buffer()
+        self.evaluate_result = Buffer()
+        self.movie_maker = MovieMaker()
 
     def reset(self):
         self.env.reset(**self.env_config["reset"])
         self.agent.reset(**self.agent_config["reset"])
-        self.buffer.reset()
+        self.buffer.reset(**self.buffer_config["reset"])
+        self.run_result.reset()
+        self.evaluate_result.reset()
 
     def run(self, n_episodes: int, train_freq: int = 1) -> Dict[str, float]:
         k_timesteps = 0
-        results = defaultdict(list)
         for k_episodes in range(n_episodes):
             k_steps = 0
             total_rewards = 0.0
-            obs = self.env.reset(**self.env_init_config)
+            obs, _ = self.env.reset(**self.env_config["reset"])
             while True:
                 k_timesteps += 1
                 k_steps += 1
@@ -73,34 +77,60 @@ class Runner(object):
                 if done:
                     break
                 obs = next_obs.copy()
-            results["episode"].append(k_episodes)
-            results["total_rewards"].append(total_rewards)
-        return results
+            self.run_result.push({"episode": k_episodes, "total_rewards": total_rewards})
+
+    def evaluate(self, savedir: str):
+        # シミュレーションの実行
+        _, info = self.env.reset(**self.env_config["reset"])
+        done = False
+        self.evaluate_result.reset()
+        self.evaluate_result.push(info)
+        self.movie_maker.reset()
+        self.movie_maker.add(self.env.render())
+        k_steps = 0
+        movie_freq = 100
+        while not done:
+            k_steps += 1
+            u = np.zeros(1, dtype=np.float64)
+            _, _, terminated, truncated, info = self.env.step(u)
+            done = terminated or truncated
+            self.evaluate_result.push(info)
+            if k_steps % movie_freq == 0 or done:
+                self.movie_maker.add(self.env.render())
+            if done:
+                break
+
+        # 結果の保存
+        savefile = "evaluate_result.pickle"
+        self.evaluate_result.save(savedir, savefile)
+
+        # 動画の保存
+        savefile = "evaluate_result.mp4"
+        self.movie_maker.make(savedir, self.env.t_max, savefile=savefile)
 
 
 if __name__ == "__main__":
-    args = argparse.ArgumentParser("Cart pole problem")
-    args.add_argument("integral_method", choices=["euler_method", "runge_kutta_method"])
+    args = argparse.ArgumentParser("Cart pole")
     parser = args.parse_args()
 
     # 環境の設定
-    t_max = 10.0
-    dt = 1e-3
-    m_cart = 1.0
-    m_ball = 1.0
-    l_pole = 1.0
-    initial_t = 0.0
     initial_x = np.array([0.0, 0.0, 1.0, np.pi / 2 - 0.1, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
-    integral_method = "runge_kutta_method"
-    env_cls = CartPoleEnv
-    env_init_config = dict(t_max=t_max, dt=dt, m_cart=m_cart, m_ball=m_ball, l_pole=l_pole)
-    env_reset_config = dict(initial_t=initial_t, initial_x=initial_x)
+    env_config = {
+        "class": CartPoleEnv,
+        "init": {"t_max": 10.0, "dt": 1e-3, "m_cart": 1.0, "m_ball": 1.0, "l_pole": 1.0},
+        "reset": {"initial_t": 0.0, "initial_x": initial_x, "integral_method": "runge_kutta_method"},
+    }
 
     # エージェントの設定
     agent_cls = ZeroAgent
     agent_init_config = {}
     agent_reset_config = {}
+    agent_config = {"class": ZeroAgent, "init": {}, "reset": {}}
+
+    # バッファの設定
+    buffer_config = {"class": Buffer, "init": {"maxlen": 1000}, "reset": {}}
 
     # Runnerの設定
-    runner = Runner(env_cls, env_init_config, env_reset_config, agent_cls, agent_init_config, agent_reset_config)
+    runner = Runner(env_config, agent_config, buffer_config)
     runner.reset()
+    runner.evaluate("result")

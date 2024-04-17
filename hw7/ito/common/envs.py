@@ -5,7 +5,7 @@ import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 
-from utils import Box
+from .utils import Box
 
 
 class Env(object):
@@ -60,7 +60,7 @@ class Env(object):
         return x.astype(self.observation_space.dtype)
 
     def get_control_input(self, action: np.ndarray) -> np.ndarray:
-        assert isinstance(action, self.action_space.dtype)
+        assert isinstance(action, np.ndarray)
         return action.astype(np.float64)
 
     def motion_equation(self, t: float, x: np.ndarray, u: np.ndarray):
