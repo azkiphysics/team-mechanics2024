@@ -168,5 +168,4 @@ if __name__ == "__main__":
     # Runnerの設定
     runner = Runner(env_config, agent_config, buffer_config)
     runner.reset()
-    runner.run(1)
     runner.evaluate("result")
