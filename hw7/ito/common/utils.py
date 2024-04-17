@@ -10,8 +10,16 @@ from matplotlib.axes import Axes
 
 class Box(object):
     def __init__(
-        self, low: float | np.ndarray, high: float | np.ndarray, shape: Sequence[int], dtype: np.float32 | np.float64
+        self,
+        low: float | Sequence | np.ndarray,
+        high: float | Sequence | np.ndarray,
+        shape: Sequence[int],
+        dtype: np.float32 | np.float64,
     ) -> None:
+        if isinstance(low, Sequence):
+            low = np.array(low, dtype=dtype)
+        if isinstance(high, Sequence):
+            high = np.array(high, dtype=dtype)
         self.low = low * np.ones_like(shape, dtype=dtype)
         self.high = high * np.ones_like(shape, dtype=dtype)
         self.shape = shape

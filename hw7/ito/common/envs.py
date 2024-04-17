@@ -1,4 +1,3 @@
-import time
 from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
@@ -6,7 +5,7 @@ import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 
-from utils import Box, Discrete
+from utils import Box
 
 
 class Env(object):
@@ -16,13 +15,19 @@ class Env(object):
         self.t_max = t_max
         self.dt = dt
 
-        self.observation_space: Box | Discrete = None
-        self.action_space: Box | Discrete = None
         self.t: float = None
         self.x: np.ndarray | None = None
         self.integral_method: str | None = None
         self.fig: Figure = None
         self.ax: Axes = None
+
+    @property
+    def observation_space(self) -> Box:
+        raise NotImplementedError()
+
+    @property
+    def action_space(self) -> Box:
+        raise NotImplementedError()
 
     def integral(self, t: float, x: np.ndarray, u: np.ndarray) -> Tuple[float, np.ndarray]:
         """運動方程式の積分"""
@@ -50,6 +55,14 @@ class Env(object):
         next_x = x + self.dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
         return next_t, next_x
 
+    def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
+        """観測量の取得"""
+        return x.astype(self.observation_space.dtype)
+
+    def get_control_input(self, action: np.ndarray) -> np.ndarray:
+        assert isinstance(action, self.action_space.dtype)
+        return action.astype(np.float64)
+
     def motion_equation(self, t: float, x: np.ndarray, u: np.ndarray):
         """運動方程式"""
         raise NotImplementedError()
@@ -63,23 +76,29 @@ class Env(object):
         initial_t: float,
         initial_x: np.ndarray,
         integral_method: str = "runge_kutta_method",
-    ) -> Dict[str, bool | float | np.ndarray]:
+    ) -> Tuple[np.ndarray, Dict[str, bool | float | np.ndarray]]:
         """シミュレーションの初期化"""
         self.integral_method = integral_method
         self.t = initial_t
         self.x = initial_x.copy()
-        done = self.t >= self.t_max
+        obs = self.get_observation(self.t, self.x)
         e = self.compute_energy(self.t, self.x)
-        info = {"t": self.t, "x": self.x.copy(), "e": e, "done": done}
-        return info
+        info = {"t": self.t, "x": self.x.copy(), "e": e}
+        return obs, info
 
-    def step(self, u: np.ndarray) -> Dict[str, bool | float | np.ndarray]:
+    def step(
+        self, action: int | np.ndarray
+    ) -> Tuple[np.ndarray, float, bool, bool, Dict[str, bool | float | np.ndarray]]:
         """シミュレーションの実行 (1ステップ)"""
+        u = self.get_control_input(action)
         self.t, self.x = self.integral(self.t, self.x, u)
-        done = self.t >= self.t_max
+        obs = self.get_observation(self.t, self.x)
+        reward = 0.0
+        terminated = False
+        truncated = self.t >= self.t_max
         e = self.compute_energy(self.t, self.x)
-        info = {"t": self.t, "x": self.x.copy(), "e": e, "done": done}
-        return info
+        info = {"t": self.t, "x": self.x.copy(), "e": e}
+        return obs, reward, terminated, truncated, info
 
     def render(self) -> np.ndarray:
         """図の描画"""
@@ -143,6 +162,12 @@ class MultiBodyEnv(Env):
         """状態変数のインデックスの取得"""
         return self.get_independent_coordinate_indices() + self.get_independent_velocity_indices()
 
+    def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
+        """観測量の取得"""
+        state_indices = self.get_state_indices()
+        obs = x[state_indices].astype(self.observation_space.dtype)
+        return obs
+
     def newton_raphson_method(self, t: float, x: np.ndarray) -> np.ndarray:
         """ニュートンラフソン法"""
         pos_indices = self.get_coordinate_indices()
@@ -172,29 +197,26 @@ class MultiBodyEnv(Env):
         initial_t: float,
         initial_x: np.ndarray,
         integral_method: str = "runge_kutta_method",
-    ) -> Dict[str, bool | float | np.ndarray]:
+    ) -> Tuple[np.ndarray, Dict[str, bool | float | np.ndarray]]:
         """シミュレーションの初期化"""
-        start = time.time()
-        info = super().reset(initial_t, initial_x, integral_method)
+        _, info = super().reset(initial_t, initial_x, integral_method)
         self.x = self.newton_raphson_method(self.t, self.x)
+        obs = self.get_observation(self.t, self.x)
         e = self.compute_energy(self.t, self.x)
         C = self.compute_C(self.t, self.x)
-        end = time.time()
-        calc_speed = end - start
-        info |= {"x": self.x.copy(), "e": e, "C": C.copy(), "calc_speed": calc_speed}
-        return info
+        info |= {"x": self.x.copy(), "e": e, "C": C.copy()}
+        return obs, info
 
-    def step(self, u) -> Dict[str, bool | float | np.ndarray]:
+    def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, Dict[str, bool | float | np.ndarray]]:
         """シミュレーションの実行 (1ステップ)"""
-        start = time.time()
-        info = super().step(u)
+        u = self.get_control_input(action)
+        _, reward, terminated, truncated, info = super().step(action)
         self.x = self.newton_raphson_method(self.t, self.x)
+        obs = self.get_observation(self.t, self.x, u=u)
         e = self.compute_energy(self.t, self.x)
         C = self.compute_C(self.t, self.x)
-        end = time.time()
-        calc_speed = end - start
-        info |= {"x": self.x.copy(), "e": e, "C": C.copy(), "calc_speed": calc_speed}
-        return info
+        info |= {"x": self.x.copy(), "e": e, "C": C.copy()}
+        return obs, reward, terminated, truncated, info
 
 
 class CartPoleEnv(MultiBodyEnv):
@@ -213,6 +235,14 @@ class CartPoleEnv(MultiBodyEnv):
         self.m_ball = m_ball  # ポールの上部に取り付けられたボールの質量
         self.l_pole = l_pole  # ポールの長さ
         self.g = 9.8  # 重力加速度
+
+    @property
+    def observation_space(self) -> Box:
+        return Box(-np.inf, np.inf, (4,), np.float32)
+
+    @property
+    def action_space(self) -> Box:
+        return Box(-np.inf, np.inf, (1,), np.float32)
 
     def compute_mass_matrix(self, t: float, x: np.ndarray) -> np.ndarray:
         theta_pole = x[3]
