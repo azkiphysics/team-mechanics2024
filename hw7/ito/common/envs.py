@@ -393,7 +393,7 @@ class CartPoleEnv(MultiBodyEnv):
         self.ax.cla()
         self.ax.set_xlim(-2.5 * self.l_pole, 2.5 * self.l_pole)
         self.ax.set_ylim(-1.5 * self.l_pole, 1.5 * self.l_pole)
-        self.ax.set_axis_off()
+        # self.ax.set_axis_off()
         self.ax.set_aspect("equal")
 
         cart_center_x = self.x[0]
@@ -413,21 +413,21 @@ class CartPoleEnv(MultiBodyEnv):
         cart_x = np.linspace(-0.15 * self.l_pole + cart_center_x, 0.15 * self.l_pole + cart_center_x, 100)
         cart_y_upper = 0.1 * self.l_pole * np.ones_like(cart_x, dtype=np.float64)
         cart_y_lower = -0.1 * self.l_pole * np.ones_like(cart_x, dtype=np.float64)
-        self.ax.fill_between(cart_x, cart_y_upper, cart_y_lower, color="blue", zorder=0)
+        self.ax.fill_between(cart_x, cart_y_upper, cart_y_lower, color="blue", zorder=1)
 
         # 車輪の描画
         wheel_right_x = cart_center_x + self.l_pole * (0.1 + 0.05 * np.cos(angle_upper))
         wheel_left_x = cart_center_x + self.l_pole * (-0.1 + 0.05 * np.cos(angle_upper))
         wheel_upper_y = self.l_pole * (-0.15 + 0.05 * np.sin(angle_upper))
         wheel_lower_y = self.l_pole * (-0.15 + 0.05 * np.sin(angle_lower))
-        self.ax.fill_between(wheel_right_x, wheel_upper_y, wheel_lower_y, color="black", zorder=1)
-        self.ax.fill_between(wheel_left_x, wheel_upper_y, wheel_lower_y, color="black", zorder=1)
+        self.ax.fill_between(wheel_right_x, wheel_upper_y, wheel_lower_y, color="black", zorder=2)
+        self.ax.fill_between(wheel_left_x, wheel_upper_y, wheel_lower_y, color="black", zorder=2)
 
         # 球の描画
         ball_x = ball_center[0] + 0.1 * self.l_pole * np.cos(angle_upper)
         ball_upper_y = ball_center[1] + 0.1 * self.l_pole * np.sin(angle_upper)
         ball_lower_y = ball_center[1] + 0.1 * self.l_pole * np.sin(angle_lower)
-        self.ax.fill_between(ball_x, ball_upper_y, ball_lower_y, color="red", zorder=2)
+        self.ax.fill_between(ball_x, ball_upper_y, ball_lower_y, color="red", zorder=3)
 
         # 棒の描画
         R = np.array(
@@ -437,7 +437,7 @@ class CartPoleEnv(MultiBodyEnv):
         initial_pole_lower_x = np.array([-self.l_pole, 0.0], dtype=np.float64)
         pole_upper_x, pole_upper_y = ball_center + R @ initial_pole_upper_x
         pole_lower_x, pole_lower_y = ball_center + R @ initial_pole_lower_x
-        self.ax.plot([pole_upper_x, pole_lower_x], [pole_upper_y, pole_lower_y], color="black", linewidth=2, zorder=1)
+        self.ax.plot([pole_upper_x, pole_lower_x], [pole_upper_y, pole_lower_y], color="black", linewidth=2, zorder=2)
 
         # 図の描画
         self.fig.canvas.draw()
