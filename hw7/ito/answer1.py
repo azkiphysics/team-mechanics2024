@@ -117,7 +117,7 @@ class Runner(object):
         fig, ax = plt.subplots(figsize=(8, 6))
         for idx in range(obss.shape[1]):
             ax.plot(ts, obss[:, idx], label="$" + f"x_{idx + 1}" + "$")
-        ax.legend(loc="upper right")
+        ax.legend(loc="lower right")
         savefile = "evaluate_result_obs.png"
         savepath = os.path.join(savedir, savefile)
         fig.savefig(savepath, dpi=300)
