@@ -50,7 +50,7 @@ class Runner(object):
         self.run_result.reset()
         self.evaluate_result.reset()
 
-    def run(self, n_episodes: int, train_freq: int = 1) -> Dict[str, float]:
+    def run(self, n_episodes: int, train_freq: int | None = None) -> Dict[str, float]:
         k_timesteps = 0
         for k_episodes in range(n_episodes):
             k_steps = 0
@@ -72,7 +72,7 @@ class Runner(object):
                     }
                 )
                 total_rewards += reward
-                if k_timesteps % train_freq == 0:
+                if train_freq is not None and train_freq > 0 and k_timesteps % train_freq == 0:
                     self.agent.train(buffer=self.buffer)
                 if done:
                     break
@@ -81,7 +81,7 @@ class Runner(object):
 
     def evaluate(self, savedir: str):
         # シミュレーションの実行
-        _, info = self.env.reset(**self.env_config["reset"])
+        obs, info = self.env.reset(**self.env_config["reset"])
         done = False
         self.evaluate_result.reset()
         self.evaluate_result.push(info)
@@ -91,14 +91,15 @@ class Runner(object):
         movie_freq = 100
         while not done:
             k_steps += 1
-            u = np.zeros(1, dtype=np.float64)
-            _, _, terminated, truncated, info = self.env.step(u)
+            action = self.agent.act(obs)
+            next_obs, _, terminated, truncated, info = self.env.step(action)
             done = terminated or truncated
             self.evaluate_result.push(info)
             if k_steps % movie_freq == 0 or done:
                 self.movie_maker.add(self.env.render())
             if done:
                 break
+            obs = next_obs.copy()
 
         # 結果の保存
         savefile = "evaluate_result.pickle"
@@ -122,9 +123,6 @@ if __name__ == "__main__":
     }
 
     # エージェントの設定
-    agent_cls = ZeroAgent
-    agent_init_config = {}
-    agent_reset_config = {}
     agent_config = {"class": ZeroAgent, "init": {}, "reset": {}}
 
     # バッファの設定
