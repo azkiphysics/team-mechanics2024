@@ -1,5 +1,5 @@
 import argparse
-from typing import Dict
+from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,7 +27,7 @@ plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
 class Runner(object):
     def __init__(
         self,
-        env_config: Dict[str, Env | Dict[str, int | float]],
+        env_config: Dict[str, Env | Dict[str, int | float] | List[Dict[str, int | float]]],
         agent_config: Dict[str, Agent | Dict[str, int | float]],
         buffer_config: Dict[str, Buffer | Dict[str, int]],
     ) -> None:
@@ -36,7 +36,9 @@ class Runner(object):
         self.buffer_config = buffer_config
 
         self.env: Env = env_config["class"](**env_config["init"])
-        self.env = LQRMultiBodyEnvWrapper(self.env)
+        if "wrapper" in env_config:
+            for env_wrapper_config in self.env_config["wrapper"]:
+                self.env = env_wrapper_config["class"](self.env, **env_wrapper_config["init"])
         self.agent: Agent = agent_config["class"](
             self.env.observation_space, self.env.action_space, **agent_config["init"]
         )
@@ -120,14 +122,18 @@ if __name__ == "__main__":
 
     # 環境の設定
     initial_x = np.array([0.0, 0.0, 1.0, np.pi / 2 - 0.1, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
+    target_x = initial_x.copy()
+    target_x[0] = 1.0
+    target_x[3] = np.pi / 2.0
     env_config = {
         "class": CartPoleEnv,
+        "wrapper": [{"class": LQRMultiBodyEnvWrapper, "init": {}}],
         "init": {"t_max": 10.0, "dt": 1e-3, "m_cart": 1.0, "m_ball": 1.0, "l_pole": 1.0},
         "reset": {
             "initial_t": 0.0,
             "initial_x": initial_x,
             "integral_method": "runge_kutta_method",
-            "target_x": np.array([1.0, 0.0, 1.0, np.pi / 2, 0.0, 0.0, 0.0, 0.0], dtype=np.float64),
+            "target_x": target_x,
             "Q": 1.0,
             "R": 1.0,
         },
