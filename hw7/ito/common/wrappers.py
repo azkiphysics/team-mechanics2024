@@ -278,3 +278,6 @@ class QMultiBodyEnvWrapper(MultiBodyEnvWrapper):
     def get_control_input(self, action: int) -> np.ndarray:
         u = self.discrete_us[action]
         return u
+
+    def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
+        # TODO: 報酬設計
