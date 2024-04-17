@@ -97,10 +97,7 @@ class Env(object):
         raise NotImplementedError()
 
     def reset(
-        self,
-        initial_t: float,
-        initial_x: np.ndarray,
-        integral_method: str = "runge_kutta_method",
+        self, initial_t: float, initial_x: np.ndarray, integral_method: str = "runge_kutta_method", **kwargs
     ) -> Tuple[np.ndarray, Dict[str, bool | float | np.ndarray]]:
         """シミュレーションの初期化"""
         self.integral_method = integral_method

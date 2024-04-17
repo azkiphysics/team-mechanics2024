@@ -33,7 +33,7 @@ class Wrapper(object):
         return self.env.get_state(t, x, u=u)
 
     def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
-        return self.env.get_observation(t, x, u=u)
+        return self.get_state(t, x, u=u)
 
     def get_control_input(self, action: np.ndarray) -> np.ndarray:
         return self.env.get_control_input(action)
@@ -48,9 +48,9 @@ class Wrapper(object):
         return self.env.get_truncated(t, x, u)
 
     def reset(
-        self, initial_t: float, initial_x: np.ndarray, integral_method: str = "runge_kutta_method"
+        self, initial_t: float, initial_x: np.ndarray, integral_method: str = "runge_kutta_method", **kwargs
     ) -> Tuple[np.ndarray, Dict[str, bool | float | np.ndarray]]:
-        _, info = self.env.reset(initial_t, initial_x)
+        _, info = self.env.reset(initial_t, initial_x, integral_method=integral_method, **kwargs)
         t = info.get("t")
         x = info.get("x")
         obs = self.get_observation(t, x)
@@ -75,12 +75,40 @@ class Wrapper(object):
         return self.env.unwrapped
 
 
-class LQRMultiBodyEnvWrapper(Wrapper):
+class MultiBodyEnvWrapper(Wrapper):
     def __init__(self, env: MultiBodyEnv) -> None:
         self.env = env
 
         self.initial_t: float = None
         self.target_x: np.ndarray = None
+
+    def get_state(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
+        state_indices = self.env.unwrapped.get_state_indices()
+        state = x[state_indices].astype(self.state_space.dtype)
+        target_state = self.target_x[state_indices].astype(self.state_space.dtype)
+        return state - target_state
+
+    def reset(
+        self,
+        initial_t: float,
+        initial_x: np.ndarray,
+        target_x: np.ndarray,
+        integral_method: str = "runge_kutta_method",
+        **kwargs,
+    ) -> Tuple[np.ndarray | Dict[str, bool | float | np.ndarray]]:
+        self.initial_t = initial_t
+        self.target_x = self.env.unwrapped.newton_raphson_method(initial_t, target_x)
+        return super().reset(initial_t=initial_t, initial_x=initial_x, integral_method=integral_method, **kwargs)
+
+    @property
+    def unwrapped(self) -> MultiBodyEnv:
+        return self.env.unwrapped
+
+
+class LQRMultiBodyEnvWrapper(MultiBodyEnvWrapper):
+    def __init__(self, env: MultiBodyEnv) -> None:
+        super().__init__(env)
+
         self.Q: np.ndarray = None
         self.R: np.ndarray = None
 
@@ -91,21 +119,19 @@ class LQRMultiBodyEnvWrapper(Wrapper):
 
         # Biの計算
         Cq = self.env.unwrapped.compute_Cq(t, x)
-        Cqi = Cq[independent_pos_indices]
-        Cqd = Cq[dependent_pos_indices]
+        Cqi = Cq[:, independent_pos_indices]
+        Cqd = Cq[:, dependent_pos_indices]
         Cdi = -np.linalg.inv(Cqd) @ Cqi
         Bi = np.zeros((len(pos_indices), len(independent_pos_indices)), dtype=np.float64)
         Bi[independent_pos_indices] = np.identity(len(independent_pos_indices))
         Bi[dependent_pos_indices] = Cdi
 
         # ddqの計算
-        M = self.env.unwrapped.compute_mass_matrix(t, x)
-        Qe = self.env.unwrapped.compute_external_force(t, x, u)
-        Ctt = self.env.unwrapped.compute_Ctt(t, x)
-        Cqdqq = self.env.unwrapped.compute_Cqdqq(t, x)
-        Cqt = self.env.unwrapped.compute_Cqt(t, x)
-        dq = x[4:]
-        Cd = np.linalg.inv(Cqd) @ (-Ctt - Cqdqq @ dq - 2.0 * Cqt @ dq)
+        M = self.env.unwrapped.compute_mass_matrix(t, x)[: len(pos_indices), : len(pos_indices)]
+        Q = self.env.unwrapped.compute_external_force(t, x, u)
+        Qe = Q[: len(pos_indices)]
+        Qd = Q[len(pos_indices) :]
+        Cd = np.linalg.inv(Cqd) @ Qd
         gammai = np.zeros(len(pos_indices), dtype=np.float64)
         gammai[dependent_pos_indices] = Cd
         return np.linalg.inv(Bi.T @ M @ Bi) @ (Bi.T @ Qe - Bi.T @ M @ gammai)
@@ -140,7 +166,7 @@ class LQRMultiBodyEnvWrapper(Wrapper):
         B = np.zeros((n_states, n_us), dtype=np.float64)
         u = np.zeros(n_us, dtype=self.env.unwrapped.u_space.dtype)
         h = 1e-7
-        for idx in range(n_states):
+        for idx in range(n_us):
             u_plus = u.copy()
             u_plus[idx] += h
             ddqi_plus = self.compute_ddqi(self.initial_t, self.target_x, u_plus)
@@ -164,18 +190,9 @@ class LQRMultiBodyEnvWrapper(Wrapper):
         n_us = self.env.unwrapped.u_space.shape[0]
         return np.zeros((n_obs, n_us), dtype=np.float64)
 
-    def get_state(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
-        state_indices = self.env.unwrapped.get_state_indices()
-        state = x[state_indices].astype(self.state_space.dtype)
-        target_state = self.target_x[state_indices].astype(self.state_space.dtype)
-        return state - target_state
-
-    def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
-        return self.get_state(t, x, u=u).astype(self.observation_space.dtype)
-
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
         s = self.get_state(t, x, u=u)
-        cost = 0.5 * (s @ self.Q @ s + u @ self.R @ u)
+        cost = 0.5 * (s @ self.Q @ s + u @ self.R @ u) * self.env.unwrapped.dt
         return -cost
 
     def reset(
@@ -186,15 +203,12 @@ class LQRMultiBodyEnvWrapper(Wrapper):
         Q: float | np.ndarray,
         R: float | np.ndarray,
         integral_method: str = "runge_kutta_method",
+        **kwargs,
     ) -> Tuple[np.ndarray | Dict[str, bool | float | np.ndarray]]:
-        self.initial_t = initial_t
-        self.target_x = self.env.unwrapped.newton_raphson_method(initial_t, target_x)
         n_obs = self.observation_space.shape[0]
         n_us = self.u_space.shape[0]
         self.Q = Q * np.identity(n_obs, dtype=np.float64)
         self.R = R * np.identity(n_us, dtype=np.float64)
-        return super().reset(initial_t, initial_x)
-
-    @property
-    def unwrapped(self) -> MultiBodyEnv:
-        return self.env.unwrapped
+        return super().reset(
+            initial_t=initial_t, initial_x=initial_x, target_x=target_x, integral_method=integral_method, **kwargs
+        )

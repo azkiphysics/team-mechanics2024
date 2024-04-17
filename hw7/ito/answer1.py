@@ -58,6 +58,7 @@ class Runner(object):
             k_steps = 0
             total_rewards = 0.0
             obs, _ = self.env.reset(**self.env_config["reset"])
+            self.agent.reset(**self.agent_config["reset"])
             while True:
                 k_timesteps += 1
                 k_steps += 1
@@ -84,6 +85,7 @@ class Runner(object):
     def evaluate(self, savedir: str):
         # シミュレーションの実行
         obs, info = self.env.reset(**self.env_config["reset"])
+        self.agent.reset(**self.agent_config["reset"])
         done = False
         self.evaluate_result.reset()
         self.evaluate_result.push(info)
@@ -140,4 +142,5 @@ if __name__ == "__main__":
     # Runnerの設定
     runner = Runner(env_config, agent_config, buffer_config)
     runner.reset()
+    runner.run(1)
     runner.evaluate("result")
