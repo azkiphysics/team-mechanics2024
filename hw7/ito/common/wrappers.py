@@ -2,7 +2,7 @@ from typing import Dict, Tuple
 import numpy as np
 
 from .envs import Env, MultiBodyEnv
-from .utils import Box
+from .utils import Box, Discrete
 
 
 class Wrapper(object):
@@ -212,3 +212,69 @@ class LQRMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         return super().reset(
             initial_t=initial_t, initial_x=initial_x, target_x=target_x, integral_method=integral_method, **kwargs
         )
+
+
+class QMultiBodyEnvWrapper(MultiBodyEnvWrapper):
+    def __init__(
+        self,
+        env: MultiBodyEnv,
+        state_low: float | list | np.ndarray,
+        state_high: float | list | np.ndarray,
+        u_low: float | list | np.ndarray,
+        u_high: float | list | np.ndarray,
+        n_obs_splits: int,
+        n_action_splits: int,
+    ) -> None:
+        super().__init__(env)
+        self.state_low = np.array(state_low) * np.ones(
+            self.env.unwrapped.observation_space.shape, dtype=self.env.unwrapped.observation_space.dtype
+        )
+        self.state_high = np.array(state_high) * np.ones(
+            self.env.unwrapped.observation_space.shape, dtype=self.env.unwrapped.observation_space.dtype
+        )
+        self.u_low = np.array(u_low) * np.ones(
+            self.env.unwrapped.action_space.shape, dtype=self.env.unwrapped.action_space.dtype
+        )
+        self.u_high = np.array(u_high) * np.ones(
+            self.env.unwrapped.action_space.shape, dtype=self.env.unwrapped.action_space.dtype
+        )
+        self.discrete_states = np.concatenate(
+            [
+                val.reshape(-1)
+                for val in np.meshgrid(
+                    *[
+                        np.linspace(low, high, n_obs_splits + 1)[:-1]
+                        for low, high in zip(self.state_low, self.state_high)
+                    ]
+                )
+            ],
+            axis=0,
+        ).T
+        self.discrete_us = np.concatenate(
+            [
+                val.reshape(-1)
+                for val in np.meshgrid(
+                    *[np.linspace(low, high, n_action_splits + 1)[:-1] for low, high in zip(self.u_low, self.u_high)]
+                )
+            ],
+            axis=0,
+        ).T
+        self.n_obs_splits = n_obs_splits
+        self.n_action_splits = n_action_splits
+
+    @property
+    def observation_space(self):
+        return Discrete(self.n_obs_splits ** self.env.unwrapped.observation_space.shape[0])
+
+    @property
+    def action_space(self):
+        return Discrete(self.n_action_splits ** self.env.unwrapped.observation_space.shape[0])
+
+    def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
+        state = self.get_state(t, x, u=u)
+        obs = np.argmin(np.linalg.norm(self.discrete_states - state, axis=1))
+        return obs
+
+    def get_control_input(self, action: int) -> np.ndarray:
+        u = self.discrete_us[action]
+        return u
