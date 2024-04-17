@@ -4,12 +4,13 @@ from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm import tqdm
 
-from common.agents import Agent, LQRAgent
+from common.agents import Agent, LQRAgent, QAgent
 from common.buffers import Buffer
 from common.envs import Env, CartPoleEnv
 from common.utils import MovieMaker
-from common.wrappers import LQRMultiBodyEnvWrapper
+from common.wrappers import LQRMultiBodyEnvWrapper, QMultiBodyEnvWrapper
 
 # Matplotlibで綺麗な論文用のグラフを作る
 # https://qiita.com/MENDY/items/fe9b0c50383d8b2fd919
@@ -53,9 +54,9 @@ class Runner(object):
         self.run_result.reset()
         self.evaluate_result.reset()
 
-    def run(self, n_episodes: int, train_freq: int | None = None) -> Dict[str, float]:
+    def run(self, n_episodes: int, trainfreq: int | None = None) -> Dict[str, float]:
         k_timesteps = 0
-        for k_episodes in range(n_episodes):
+        for k_episodes in tqdm(range(n_episodes)):
             k_steps = 0
             total_rewards = 0.0
             obs, _ = self.env.reset(**self.env_config["reset"])
@@ -76,7 +77,7 @@ class Runner(object):
                     }
                 )
                 total_rewards += reward
-                if train_freq is not None and train_freq > 0 and k_timesteps % train_freq == 0:
+                if trainfreq is not None and trainfreq > 0 and k_timesteps % trainfreq == 0:
                     self.agent.train(buffer=self.buffer)
                 if done:
                     break
@@ -86,10 +87,10 @@ class Runner(object):
     def evaluate(self, savedir: str):
         # シミュレーションの実行
         obs, info = self.env.reset(**self.env_config["reset"])
-        self.agent.reset(**self.agent_config["reset"])
+        self.agent.reset(**self.agent_config["reset"], is_evaluate=True)
         done = False
         self.evaluate_result.reset()
-        self.evaluate_result.push(info | {"obs": obs})
+        self.evaluate_result.push(info)
         self.movie_maker.reset()
         self.movie_maker.add(self.env.render())
         k_steps = 0
@@ -99,7 +100,7 @@ class Runner(object):
             action = self.agent.act(obs)
             next_obs, _, terminated, truncated, info = self.env.step(action)
             done = terminated or truncated
-            self.evaluate_result.push(info | {"obs": obs})
+            self.evaluate_result.push(info)
             if k_steps % movie_freq == 0 or done:
                 self.movie_maker.add(self.env.render())
             if done:
@@ -112,13 +113,15 @@ class Runner(object):
 
         # 図の保存
         ts = np.array(self.evaluate_result.get()["t"], dtype=np.float64)
-        obss = np.array(self.evaluate_result.get()["obs"], dtype=np.float64)
+        states = np.array(self.evaluate_result.get()["s"], dtype=np.float64)
         us = np.array(self.evaluate_result.get()["u"], dtype=np.float64)
         fig, ax = plt.subplots(figsize=(8, 6))
-        for idx in range(obss.shape[1]):
-            ax.plot(ts, obss[:, idx], label="$" + f"x_{idx + 1}" + "$")
+        for idx in range(states.shape[1]):
+            ax.plot(ts, states[:, idx], label="$" + f"x_{idx + 1}" + "$")
+        ax.set_xlabel("Time $t$ s")
+        ax.set_ylabel("State $x$")
         ax.legend(loc="lower right")
-        savefile = "evaluate_result_obs.png"
+        savefile = "evaluate_result_state.png"
         savepath = os.path.join(savedir, savefile)
         fig.savefig(savepath, dpi=300)
         ax.cla()
@@ -148,6 +151,19 @@ if __name__ == "__main__":
     env_config = {
         "class": CartPoleEnv,
         "wrapper": [{"class": LQRMultiBodyEnvWrapper, "init": {}}],
+        # "wrapper": [
+        #     {
+        #         "class": QMultiBodyEnvWrapper,
+        #         "init": {
+        #             "state_low": -2.5,
+        #             "state_high": 2.5,
+        #             "action_low": -10.0,
+        #             "action_high": 10.0,
+        #             "n_obs_splits": 10,
+        #             "n_action_splits": 5,
+        #         },
+        #     }
+        # ],
         "init": {"t_max": 15.0, "dt": 1e-3, "m_cart": 1.0, "m_ball": 1.0, "l_pole": 1.0},
         "reset": {
             "initial_t": 0.0,
@@ -161,6 +177,7 @@ if __name__ == "__main__":
 
     # エージェントの設定
     agent_config = {"class": LQRAgent, "init": {}, "reset": {"Q": Q, "R": R}}
+    # agent_config = {"class": QAgent, "init": {}, "reset": {"n_batched": 200}}
 
     # バッファの設定
     buffer_config = {"class": Buffer, "init": {"maxlen": None}, "reset": {}}
@@ -168,4 +185,6 @@ if __name__ == "__main__":
     # Runnerの設定
     runner = Runner(env_config, agent_config, buffer_config)
     runner.reset()
+    # runner.run(2)
+    # runner.run(20, trainfreq=1)
     runner.evaluate("result")

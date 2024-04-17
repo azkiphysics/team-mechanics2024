@@ -9,18 +9,18 @@ class Agent(object):
     def __init__(self, env: Env | Wrapper) -> None:
         self.env = env
 
-    def reset(self):
+    def reset(self, **kwargs):
         pass
 
     def act(self, obs: np.ndarray) -> np.ndarray:
         raise NotImplementedError()
 
-    def train(self, buffer: Buffer, *args, **kwargs):
+    def train(self, buffer: Buffer, **kwargs):
         pass
 
 
 class ZeroAgent(Agent):
-    def __init__(self, env: Env | Wrapper, *args, **kwargs) -> None:
+    def __init__(self, env: Env | Wrapper, **kwargs) -> None:
         super().__init__(env)
 
     def act(self, obs: np.ndarray) -> np.ndarray:
@@ -35,7 +35,7 @@ class LQRAgent(Agent):
         self.Q = None
         self.R = None
 
-    def reset(self, Q: float | np.ndarray, R: float | np.ndarray):
+    def reset(self, Q: float | np.ndarray, R: float | np.ndarray, **kwargs):
         A = self.env.A
         B = self.env.B
         self.Q = Q * np.identity(self.env.observation_space.shape[0], dtype=self.env.observation_space.dtype)
@@ -55,45 +55,51 @@ class QAgent(Agent):
         self.env = env
 
         self.q_table = np.random.uniform(low=-1, high=1, size=(self.env.observation_space.n, self.env.action_space.n))
-        self.is_greedy: bool = None
-        self.k_timesteps: int = None
+        self.is_evaluate: bool = None
+        self.eps_low: float = None
+        self.initial_eps: float = None
         self.decay: float = None
         self.gamma: float = None
-        self.n_samples: int = None
+        self.n_batches: int = None
 
     def reset(
         self,
-        is_greedy: bool = True,
+        eps_low: float = 0.01,
+        initial_eps: float = 0.5,
         decay: float = 0.01,
         learning_rate: float = 0.9,
         gamma: float = 0.99,
-        n_samples: int = 10,
+        n_batches: int = 10,
+        is_evaluate: bool = False,
+        **kwargs,
     ):
-        self.is_greedy = is_greedy
+        self.eps_low = eps_low
+        self.initial_eps = initial_eps
         self.k_timesteps = 0
         self.decay = decay
         self.learning_rate = learning_rate
         self.gamma = gamma
-        self.n_samples = n_samples
+        self.n_batches = n_batches
+        self.is_evaluate = is_evaluate
 
     def act(self, obs: np.ndarray):
-        eps = 0.5 * np.exp(-self.decay * self.k_timesteps)
-        if not self.is_greedy and np.random.random() < eps:
-            return np.random.randint(self.env.action_space.n)
+        eps = self.eps_low + (self.initial_eps - self.eps_low) * np.exp(-self.decay * self.k_timesteps)
+        if not self.is_evaluate and np.random.random() < eps:
+            return np.array(np.random.randint(self.env.action_space.n), dtype=np.int64)
         else:
-            return np.argmax(self.Q[obs])
+            return np.argmax(self.q_table[obs])
 
-    def train(self, buffer: Buffer, *args, **kwargs):
-        data = buffer.sample(self.n_samples)
+    def train(self, buffer: Buffer, **kwargs):
+        data = buffer.sample(self.n_batches)
         obs = np.array(data["obs"], dtype=np.int64)
-        action = np.array(data["action"], dtype=np.int64).reshape(-1, 1)
-        next_obs = np.array(data["next_obs"], dtype=np.int64).reshape(-1, 1)
-        reward = np.array(data["reward"], dtype=np.float64).resahpe(-1, 1)
-        done = np.array(data["done"], dtype=np.int64).resahpe(-1, 1)
+        action = np.array(data["action"], dtype=np.int64).reshape(-1)
+        next_obs = np.array(data["next_obs"], dtype=np.int64)
+        reward = np.array(data["reward"], dtype=np.float64).reshape(-1, 1)
+        done = np.array(data["done"], dtype=np.int64).reshape(-1, 1)
 
-        q = np.take_along_axis(self.q_table[obs], action, axis=1)
+        one_hot_action = np.identity(self.env.action_space.n)[action]
+        q = self.q_table[obs]
         next_q = np.max(self.q_table[next_obs], axis=1, keepdims=True)
         target_q = reward + self.gamma * (1.0 - done) * next_q
         td_error = target_q - q
-        one_hot_action = np.identity(self.env.action_space.n)[action.reshape(-1)]
         self.q_table[obs] += self.learning_rate * one_hot_action * td_error

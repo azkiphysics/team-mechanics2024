@@ -107,9 +107,10 @@ class Env(object):
         self.integral_method = integral_method
         self.t = initial_t
         self.x = initial_x.copy()
+        s = self.get_state(self.t, self.x)
         obs = self.get_observation(self.t, self.x)
         e = self.compute_energy(self.t, self.x)
-        info = {"t": self.t, "x": self.x.copy(), "e": e}
+        info = {"t": self.t, "x": self.x.copy(), "e": e, "s": s.copy()}
         return obs, info
 
     def step(
@@ -118,12 +119,13 @@ class Env(object):
         """シミュレーションの実行 (1ステップ)"""
         u = self.get_control_input(action)
         self.t, self.x = self.integral(self.t, self.x, u)
-        obs = self.get_observation(self.t, self.x)
+        s = self.get_state(self.t, self.x, u=u)
+        obs = self.get_observation(self.t, self.x, u=u)
         reward = self.get_reward(self.t, self.x, u)
         terminated = self.get_terminated(self.t, self.x, u)
         truncated = self.get_truncated(self.t, self.x, u)
         e = self.compute_energy(self.t, self.x)
-        info = {"t": self.t, "x": self.x.copy(), "u": u.copy(), "e": e}
+        info = {"t": self.t, "x": self.x.copy(), "u": u.copy(), "e": e, "s": s.copy()}
         return obs, reward, terminated, truncated, info
 
     def render(self) -> np.ndarray:
@@ -243,10 +245,11 @@ class MultiBodyEnv(Env):
         """シミュレーションの初期化"""
         _, info = super().reset(initial_t, initial_x, integral_method=integral_method)
         self.x = self.newton_raphson_method(self.t, self.x)
+        s = self.get_state(self.t, self.x)
         obs = self.get_observation(self.t, self.x)
         e = self.compute_energy(self.t, self.x)
         C = self.compute_C(self.t, self.x)
-        info |= {"x": self.x.copy(), "e": e, "C": C.copy()}
+        info |= {"x": self.x.copy(), "e": e, "C": C.copy(), "s": s.copy()}
         return obs, info
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, Dict[str, bool | float | np.ndarray]]:
@@ -254,10 +257,11 @@ class MultiBodyEnv(Env):
         u = self.get_control_input(action)
         _, reward, terminated, truncated, info = super().step(action)
         self.x = self.newton_raphson_method(self.t, self.x)
+        s = self.get_state(self.t, self.x, u=u)
         obs = self.get_observation(self.t, self.x, u=u)
         e = self.compute_energy(self.t, self.x)
         C = self.compute_C(self.t, self.x)
-        info |= {"x": self.x.copy(), "e": e, "C": C.copy()}
+        info |= {"x": self.x.copy(), "e": e, "C": C.copy(), "s": s.copy()}
         return obs, reward, terminated, truncated, info
 
 
