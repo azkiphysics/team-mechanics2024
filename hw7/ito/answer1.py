@@ -1,4 +1,5 @@
 import argparse
+import os
 from typing import Dict, List
 
 import matplotlib.pyplot as plt
@@ -88,7 +89,7 @@ class Runner(object):
         self.agent.reset(**self.agent_config["reset"])
         done = False
         self.evaluate_result.reset()
-        self.evaluate_result.push(info)
+        self.evaluate_result.push(info | {"obs": obs})
         self.movie_maker.reset()
         self.movie_maker.add(self.env.render())
         k_steps = 0
@@ -98,16 +99,35 @@ class Runner(object):
             action = self.agent.act(obs)
             next_obs, _, terminated, truncated, info = self.env.step(action)
             done = terminated or truncated
-            self.evaluate_result.push(info)
+            self.evaluate_result.push(info | {"obs": obs})
             if k_steps % movie_freq == 0 or done:
                 self.movie_maker.add(self.env.render())
             if done:
                 break
             obs = next_obs.copy()
 
-        # 結果の保存
+        # 結果データの保存
         savefile = "evaluate_result.pickle"
         self.evaluate_result.save(savedir, savefile)
+
+        # 図の保存
+        ts = np.array(self.evaluate_result.get()["t"], dtype=np.float64)
+        obss = np.array(self.evaluate_result.get()["obs"], dtype=np.float64)
+        us = np.array(self.evaluate_result.get()["u"], dtype=np.float64)
+        fig, ax = plt.subplots(figsize=(8, 6))
+        for idx in range(obss.shape[1]):
+            ax.plot(ts, obss[:, idx], label="$" + f"x_{idx + 1}" + "$")
+        ax.legend(loc="upper right")
+        savefile = "evaluate_result_obs.png"
+        savepath = os.path.join(savedir, savefile)
+        fig.savefig(savepath, dpi=300)
+        ax.cla()
+        for idx in range(us.shape[1]):
+            ax.plot(ts[:-1], us[:, idx], label="$" + f"u_{idx + 1}" + "$")
+        ax.legend(loc="lower right")
+        savefile = "evaluate_result_u.png"
+        savepath = os.path.join(savedir, savefile)
+        fig.savefig(savepath, dpi=300)
 
         # 動画の保存
         savefile = "evaluate_result.mp4"
@@ -128,7 +148,7 @@ if __name__ == "__main__":
     env_config = {
         "class": CartPoleEnv,
         "wrapper": [{"class": LQRMultiBodyEnvWrapper, "init": {}}],
-        "init": {"t_max": 10.0, "dt": 1e-3, "m_cart": 1.0, "m_ball": 1.0, "l_pole": 1.0},
+        "init": {"t_max": 15.0, "dt": 1e-3, "m_cart": 1.0, "m_ball": 1.0, "l_pole": 1.0},
         "reset": {
             "initial_t": 0.0,
             "initial_x": initial_x,

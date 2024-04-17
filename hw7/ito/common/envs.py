@@ -76,16 +76,20 @@ class Env(object):
         return self.get_state(t, x, u=u).astype(self.observation_space.dtype)
 
     def get_control_input(self, action: np.ndarray) -> np.ndarray:
+        """制御入力の取得"""
         assert isinstance(action, np.ndarray)
         return action.astype(np.float64)
 
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray):
+        """報酬の取得"""
         return 0.0
 
     def get_terminated(self, t: float, x: np.ndarray, u: np.ndarray):
+        """終了条件による終了判定結果の取得"""
         return False
 
     def get_truncated(self, t: float, x: np.ndarray, u: np.ndarray):
+        """制限時間による終了判定結果の取得"""
         return self.t >= self.t_max
 
     def motion_equation(self, t: float, x: np.ndarray, u: np.ndarray):
