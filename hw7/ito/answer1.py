@@ -4,7 +4,7 @@ from typing import Dict, List
 import matplotlib.pyplot as plt
 import numpy as np
 
-from common.agents import Agent, ZeroAgent
+from common.agents import Agent, LQRAgent
 from common.buffers import Buffer
 from common.envs import Env, CartPoleEnv
 from common.utils import MovieMaker
@@ -39,9 +39,7 @@ class Runner(object):
         if "wrapper" in env_config:
             for env_wrapper_config in self.env_config["wrapper"]:
                 self.env = env_wrapper_config["class"](self.env, **env_wrapper_config["init"])
-        self.agent: Agent = agent_config["class"](
-            self.env.observation_space, self.env.action_space, **agent_config["init"]
-        )
+        self.agent: Agent = agent_config["class"](self.env, **agent_config["init"])
         self.buffer: Buffer = buffer_config["class"](**buffer_config["init"])
         self.run_result = Buffer()
         self.evaluate_result = Buffer()
@@ -121,10 +119,12 @@ if __name__ == "__main__":
     parser = args.parse_args()
 
     # 環境の設定
-    initial_x = np.array([0.0, 0.0, 1.0, np.pi / 2 - 0.1, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
+    initial_x = np.array([0.0, 0.0, 1.0, np.pi / 2 + 0.3, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
     target_x = initial_x.copy()
     target_x[0] = 1.0
     target_x[3] = np.pi / 2.0
+    Q = 1.0
+    R = 1.0
     env_config = {
         "class": CartPoleEnv,
         "wrapper": [{"class": LQRMultiBodyEnvWrapper, "init": {}}],
@@ -134,13 +134,13 @@ if __name__ == "__main__":
             "initial_x": initial_x,
             "integral_method": "runge_kutta_method",
             "target_x": target_x,
-            "Q": 1.0,
-            "R": 1.0,
+            "Q": Q,
+            "R": R,
         },
     }
 
     # エージェントの設定
-    agent_config = {"class": ZeroAgent, "init": {}, "reset": {}}
+    agent_config = {"class": LQRAgent, "init": {}, "reset": {"Q": Q, "R": R}}
 
     # バッファの設定
     buffer_config = {"class": Buffer, "init": {"maxlen": 1000}, "reset": {}}
