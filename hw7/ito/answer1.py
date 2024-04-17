@@ -163,7 +163,7 @@ if __name__ == "__main__":
     agent_config = {"class": LQRAgent, "init": {}, "reset": {"Q": Q, "R": R}}
 
     # バッファの設定
-    buffer_config = {"class": Buffer, "init": {"maxlen": 1000}, "reset": {}}
+    buffer_config = {"class": Buffer, "init": {"maxlen": None}, "reset": {}}
 
     # Runnerの設定
     runner = Runner(env_config, agent_config, buffer_config)
