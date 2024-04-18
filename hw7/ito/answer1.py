@@ -146,24 +146,24 @@ if __name__ == "__main__":
     target_x = initial_x.copy()
     target_x[0] = 1.0
     target_x[3] = np.pi / 2.0
-    Q = 1.0
-    R = 1.0
+    Q = 100.0
+    R = 100.0
     env_config = {
         "class": CartPoleEnv,
-        "wrapper": [{"class": LQRMultiBodyEnvWrapper, "init": {}}],
-        # "wrapper": [
-        #     {
-        #         "class": QMultiBodyEnvWrapper,
-        #         "init": {
-        #             "state_low": -2.5,
-        #             "state_high": 2.5,
-        #             "action_low": -10.0,
-        #             "action_high": 10.0,
-        #             "n_obs_splits": 10,
-        #             "n_action_splits": 5,
-        #         },
-        #     }
-        # ],
+        # "wrapper": [{"class": LQRMultiBodyEnvWrapper, "init": {}}],
+        "wrapper": [
+            {
+                "class": QMultiBodyEnvWrapper,
+                "init": {
+                    "state_low": [-2.5, -0.4, -3.0, -3.0],
+                    "state_high": [2.5, +0.4, 3.0, 3.0],
+                    "action_low": [[0.0, -60, 0.0, -15.0]],
+                    "action_high": [[2.0, -50, 3.0, -10.0]],
+                    "n_obs_splits": 6,
+                    "n_action_splits": 6,
+                },
+            }
+        ],
         "init": {"t_max": 15.0, "dt": 1e-3, "m_cart": 1.0, "m_ball": 1.0, "l_pole": 1.0},
         "reset": {
             "initial_t": 0.0,
@@ -176,8 +176,8 @@ if __name__ == "__main__":
     }
 
     # エージェントの設定
-    agent_config = {"class": LQRAgent, "init": {}, "reset": {"Q": Q, "R": R}}
-    # agent_config = {"class": QAgent, "init": {}, "reset": {"n_batched": 200}}
+    # agent_config = {"class": LQRAgent, "init": {}, "reset": {"Q": Q, "R": R}}
+    agent_config = {"class": QAgent, "init": {}, "reset": {"eps_update_freq": 10, "n_batches": 1}}
 
     # バッファの設定
     buffer_config = {"class": Buffer, "init": {"maxlen": None}, "reset": {}}
@@ -186,5 +186,5 @@ if __name__ == "__main__":
     runner = Runner(env_config, agent_config, buffer_config)
     runner.reset()
     # runner.run(2)
-    # runner.run(20, trainfreq=1)
+    runner.run(20, trainfreq=1)
     runner.evaluate("result")

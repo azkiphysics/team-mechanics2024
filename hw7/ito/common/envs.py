@@ -67,13 +67,13 @@ class Env(object):
         next_x = x + self.dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
         return next_t, next_x
 
-    def get_state(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
+    def get_state(self, x: np.ndarray) -> np.ndarray:
         """状態量の取得"""
         return x.astype(self.state_space.dtype)
 
     def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
         """観測量の取得"""
-        return self.get_state(t, x, u=u).astype(self.observation_space.dtype)
+        return self.get_state(x).astype(self.observation_space.dtype)
 
     def get_control_input(self, action: np.ndarray) -> np.ndarray:
         """制御入力の取得"""
@@ -107,7 +107,7 @@ class Env(object):
         self.integral_method = integral_method
         self.t = initial_t
         self.x = initial_x.copy()
-        s = self.get_state(self.t, self.x)
+        s = self.get_state(self.x)
         obs = self.get_observation(self.t, self.x)
         e = self.compute_energy(self.t, self.x)
         info = {"t": self.t, "x": self.x.copy(), "e": e, "s": s.copy()}
@@ -119,7 +119,7 @@ class Env(object):
         """シミュレーションの実行 (1ステップ)"""
         u = self.get_control_input(action)
         self.t, self.x = self.integral(self.t, self.x, u)
-        s = self.get_state(self.t, self.x, u=u)
+        s = self.get_state(self.x)
         obs = self.get_observation(self.t, self.x, u=u)
         reward = self.get_reward(self.t, self.x, u)
         terminated = self.get_terminated(self.t, self.x, u)
@@ -206,7 +206,7 @@ class MultiBodyEnv(Env):
         """状態変数のインデックスの取得"""
         return self.get_independent_coordinate_indices() + self.get_independent_velocity_indices()
 
-    def get_state(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
+    def get_state(self, x: np.ndarray) -> np.ndarray:
         """状態の取得"""
         state_indices = self.get_state_indices()
         obs = x[state_indices].astype(self.state_space.dtype)
@@ -245,7 +245,7 @@ class MultiBodyEnv(Env):
         """シミュレーションの初期化"""
         _, info = super().reset(initial_t, initial_x, integral_method=integral_method)
         self.x = self.newton_raphson_method(self.t, self.x)
-        s = self.get_state(self.t, self.x)
+        s = self.get_state(self.x)
         obs = self.get_observation(self.t, self.x)
         e = self.compute_energy(self.t, self.x)
         C = self.compute_C(self.t, self.x)
@@ -257,7 +257,7 @@ class MultiBodyEnv(Env):
         u = self.get_control_input(action)
         _, reward, terminated, truncated, info = super().step(action)
         self.x = self.newton_raphson_method(self.t, self.x)
-        s = self.get_state(self.t, self.x, u=u)
+        s = self.get_state(self.x)
         obs = self.get_observation(self.t, self.x, u=u)
         e = self.compute_energy(self.t, self.x)
         C = self.compute_C(self.t, self.x)

@@ -55,6 +55,7 @@ class QAgent(Agent):
         self.env = env
 
         self.q_table = np.random.uniform(low=-1, high=1, size=(self.env.observation_space.n, self.env.action_space.n))
+        self.k_timesteps: int = None
         self.is_evaluate: bool = None
         self.eps_low: float = None
         self.initial_eps: float = None
@@ -65,25 +66,31 @@ class QAgent(Agent):
     def reset(
         self,
         eps_low: float = 0.01,
-        initial_eps: float = 0.5,
+        initial_eps: float = 1.0,
         decay: float = 0.01,
-        learning_rate: float = 0.9,
+        learning_rate: float = 0.5,
         gamma: float = 0.99,
-        n_batches: int = 10,
+        n_batches: int = 1,
+        eps_update_freq: int = 100,
         is_evaluate: bool = False,
         **kwargs,
     ):
         self.eps_low = eps_low
         self.initial_eps = initial_eps
         self.k_timesteps = 0
+        self.k_decay = 0
         self.decay = decay
         self.learning_rate = learning_rate
         self.gamma = gamma
         self.n_batches = n_batches
+        self.eps_update_freq = eps_update_freq
         self.is_evaluate = is_evaluate
 
     def act(self, obs: np.ndarray):
-        eps = self.eps_low + (self.initial_eps - self.eps_low) * np.exp(-self.decay * self.k_timesteps)
+        self.k_timesteps += 1
+        if self.k_timesteps % self.eps_update_freq == 0:
+            self.k_decay += 1
+        eps = self.eps_low + (self.initial_eps - self.eps_low) * np.exp(-self.decay * self.k_decay)
         if not self.is_evaluate and np.random.random() < eps:
             return np.array(np.random.randint(self.env.action_space.n), dtype=np.int64)
         else:

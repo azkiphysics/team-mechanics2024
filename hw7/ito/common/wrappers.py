@@ -29,11 +29,11 @@ class Wrapper(object):
     def action_space(self) -> Box:
         return self.env.action_space
 
-    def get_state(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
-        return self.env.get_state(t, x, u=u)
+    def get_state(self, x: np.ndarray) -> np.ndarray:
+        return self.env.get_state(x)
 
     def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
-        return self.get_state(t, x, u=u)
+        return self.get_state(x)
 
     def convert_action(self, action: np.ndarray) -> np.ndarray:
         return action
@@ -53,7 +53,9 @@ class Wrapper(object):
         _, info = self.env.reset(initial_t, initial_x, integral_method=integral_method, **kwargs)
         t = info.get("t")
         x = info.get("x")
+        state = self.get_state(x)
         obs = self.get_observation(t, x)
+        info |= {"s": state.copy()}
         return obs, info
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, Dict[str, bool | float | np.ndarray]]:
@@ -62,10 +64,12 @@ class Wrapper(object):
         t = info.get("t")
         x = info.get("x")
         u = info.get("u")
+        next_state = self.get_state(x)
         next_obs = self.get_observation(t, x, u)
         reward = self.get_reward(t, x, u)
         terminated = self.get_terminated(t, x, u)
         truncated = self.get_truncated(t, x, u)
+        info |= {"s": next_state.copy()}
         return next_obs, reward, terminated, truncated, info
 
     def render(self) -> np.ndarray:
@@ -83,7 +87,7 @@ class MultiBodyEnvWrapper(Wrapper):
         self.initial_t: float = None
         self.target_x: np.ndarray = None
 
-    def get_state(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
+    def get_state(self, x: np.ndarray) -> np.ndarray:
         state_indices = self.env.unwrapped.get_state_indices()
         state = x[state_indices].astype(self.state_space.dtype)
         target_state = self.target_x[state_indices].astype(self.state_space.dtype)
@@ -192,7 +196,7 @@ class LQRMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         return np.zeros((n_obs, n_us), dtype=np.float64)
 
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
-        s = self.get_state(t, x, u=u)
+        s = self.get_state(x)
         cost = 0.5 * (s @ self.Q @ s + u @ self.R @ u) * self.env.unwrapped.dt
         return -cost
 
@@ -234,10 +238,12 @@ class QMultiBodyEnvWrapper(MultiBodyEnvWrapper):
             self.env.unwrapped.observation_space.shape, dtype=self.env.unwrapped.observation_space.dtype
         )
         self.action_low = np.array(action_low) * np.ones(
-            self.env.unwrapped.action_space.shape, dtype=self.env.unwrapped.action_space.dtype
+            self.env.unwrapped.action_space.shape + self.env.unwrapped.observation_space.shape,
+            dtype=self.env.unwrapped.action_space.dtype,
         )
         self.action_high = np.array(action_high) * np.ones(
-            self.env.unwrapped.action_space.shape, dtype=self.env.unwrapped.action_space.dtype
+            self.env.unwrapped.action_space.shape + self.env.unwrapped.observation_space.shape,
+            dtype=self.env.unwrapped.action_space.dtype,
         )
         self.discrete_states = np.array(
             [
@@ -248,39 +254,60 @@ class QMultiBodyEnvWrapper(MultiBodyEnvWrapper):
             ],
             dtype=np.float64,
         ).T
-        self.discrete_actions = np.array(
-            [
-                val.reshape(-1)
-                for val in np.meshgrid(
-                    *[np.linspace(low, high, n_action_splits) for low, high in zip(self.action_low, self.action_high)]
-                )
-            ],
-            dtype=np.float64,
-        ).T
+        self.discrete_actions = (
+            np.array(
+                [
+                    [
+                        val.reshape(-1)
+                        for val in np.meshgrid(
+                            *[
+                                np.linspace(low, high, n_action_splits)
+                                for low, high in zip(action_low_idx, action_high_idx)
+                            ]
+                        )
+                    ]
+                    for action_low_idx, action_high_idx in zip(self.action_low, self.action_high)
+                ],
+                dtype=np.float64,
+            )
+            .swapaxes(2, 1)
+            .swapaxes(1, 0)
+        )
         self.n_obs_splits = n_obs_splits
         self.n_action_splits = n_action_splits
 
     @property
     def observation_space(self) -> Discrete:
-        return Discrete(self.n_obs_splits ** self.env.unwrapped.observation_space.shape[0])
+        return Discrete(self.discrete_states.shape[0])
 
     @property
     def action_space(self) -> Discrete:
-        return Discrete(self.n_action_splits ** self.env.unwrapped.action_space.shape[0])
+        return Discrete(self.discrete_actions.shape[0])
 
     def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
-        state = self.get_state(t, x, u=u)
-        obs = np.argmin(np.linalg.norm(self.discrete_states - state, axis=1))
+        s = self.get_state(x)
+        obs = np.argmin(np.linalg.norm(self.discrete_states - s, axis=1))
         return obs
 
     def convert_action(self, action: int) -> np.ndarray:
-        new_action = self.discrete_actions[action]
-        return new_action
+        K = self.discrete_actions[action]
+        s = self.get_state(self.env.unwrapped.x)
+        return K @ s
 
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
-        s = self.get_state(t, x, u=u)
-        cost = 0.5 * (s @ self.Q @ s + u @ self.R @ u) * self.env.unwrapped.dt
-        return -cost
+        truncated = self.get_truncated(t, x, u)
+        s = self.get_state(x)
+        if truncated:
+            reward = -0.5 * (s @ self.Q @ s + u @ self.R @ u) * (self.env.unwrapped.t_max - t)
+        else:
+            reward = -0.5 * (s @ self.Q @ s + u @ self.R @ u) * self.env.unwrapped.dt
+        return reward
+
+    def get_truncated(self, t: float, x: np.ndarray, u: np.ndarray) -> bool:
+        truncated = super().get_truncated(t, x, u)
+        s = self.get_state(x)
+        truncated |= np.sum(s < self.state_low) > 0 or np.sum(s > self.state_high) > 0
+        return truncated
 
     def reset(
         self,
