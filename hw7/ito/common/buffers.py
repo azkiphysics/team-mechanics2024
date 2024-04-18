@@ -25,6 +25,8 @@ class Buffer(object):
         for key, value in data.items():
             self.buffer[key].append(value)
         self.n_data += 1
+        if self.maxlen is not None:
+            self.n_data = self.n_data % self.maxlen
 
     def sample(self, n_samples: int) -> Dict[str, List[float | np.ndarray]]:
         if self.n_data == 0:

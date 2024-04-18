@@ -315,6 +315,79 @@ class QMultiBodyEnvWrapper(MultiBodyEnvWrapper):
             initial_t=initial_t, initial_x=initial_x, target_x=target_x, integral_method=integral_method, **kwargs
         )
 
-    def step(self, action: np.ndarray) -> Tuple[np.ndarray | float | bool | Dict[str, bool | float | np.ndarray]]:
-        self.prev_s = self.get_state(self.env.unwrapped.x)
-        return super().step(action)
+
+class DQNMultiBodyEnvWrapper(MultiBodyEnvWrapper):
+    def __init__(
+        self,
+        env: MultiBodyEnv,
+        state_low: float | list | np.ndarray,
+        state_high: float | list | np.ndarray,
+        action_low: float | list | np.ndarray,
+        action_high: float | list | np.ndarray,
+        n_action_splits: int,
+    ) -> None:
+        super().__init__(env)
+        self.state_low = np.array(state_low) * np.ones(
+            self.env.unwrapped.observation_space.shape, dtype=self.env.unwrapped.observation_space.dtype
+        )
+        self.state_high = np.array(state_high) * np.ones(
+            self.env.unwrapped.observation_space.shape, dtype=self.env.unwrapped.observation_space.dtype
+        )
+        self.action_low = np.array(action_low) * np.ones(
+            self.env.unwrapped.action_space.shape + self.env.unwrapped.observation_space.shape,
+            dtype=self.env.unwrapped.action_space.dtype,
+        )
+        self.action_high = np.array(action_high) * np.ones(
+            self.env.unwrapped.action_space.shape + self.env.unwrapped.observation_space.shape,
+            dtype=self.env.unwrapped.action_space.dtype,
+        )
+        self.discrete_actions = np.array(
+            [
+                val.reshape(-1)
+                for val in np.meshgrid(
+                    *[np.linspace(low, high, n_action_splits) for low, high in zip(self.action_low, self.action_high)]
+                )
+            ],
+            dtype=np.float64,
+        ).T
+        self.n_action_splits = n_action_splits
+
+    @property
+    def action_space(self) -> Discrete:
+        return Discrete(self.discrete_actions.shape[0])
+
+    def convert_action(self, action: int) -> np.ndarray:
+        return self.discrete_actions[action]
+
+    def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
+        truncated = self.get_truncated(t, x, u)
+        s = self.get_state(x)
+        if truncated:
+            reward = -0.5 * (s @ self.Q @ s + u @ self.R @ u) * (self.env.unwrapped.t_max - t)
+        else:
+            reward = -0.5 * (s @ self.Q @ s + u @ self.R @ u) * self.env.unwrapped.dt
+        return reward
+
+    def get_truncated(self, t: float, x: np.ndarray, u: np.ndarray) -> bool:
+        truncated = super().get_truncated(t, x, u)
+        s = self.get_state(x)
+        truncated |= np.sum(s < self.state_low) > 0 or np.sum(s > self.state_high) > 0
+        return truncated
+
+    def reset(
+        self,
+        initial_t: float,
+        initial_x: np.ndarray,
+        target_x: np.ndarray,
+        Q: float | np.ndarray,
+        R: float | np.ndarray,
+        integral_method: str = "runge_kutta_method",
+        **kwargs,
+    ) -> Tuple[np.ndarray | Dict[str, bool | float | np.ndarray]]:
+        n_obs = self.env.unwrapped.observation_space.shape[0]
+        n_us = self.env.unwrapped.u_space.shape[0]
+        self.Q = Q * np.identity(n_obs, dtype=np.float64)
+        self.R = R * np.identity(n_us, dtype=np.float64)
+        return super().reset(
+            initial_t=initial_t, initial_x=initial_x, target_x=target_x, integral_method=integral_method, **kwargs
+        )

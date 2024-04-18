@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-from common.agents import Agent, LQRAgent, QAgent
+from common.agents import Agent, LQRAgent, DQNAgent
 from common.buffers import Buffer
 from common.envs import Env, CartPoleEnv
 from common.utils import MovieMaker
-from common.wrappers import LQRMultiBodyEnvWrapper, QMultiBodyEnvWrapper
+from common.wrappers import LQRMultiBodyEnvWrapper, DQNMultiBodyEnvWrapper
 
 # Matplotlibで綺麗な論文用のグラフを作る
 # https://qiita.com/MENDY/items/fe9b0c50383d8b2fd919
@@ -150,13 +150,12 @@ if __name__ == "__main__":
         # "wrapper": [{"class": LQRMultiBodyEnvWrapper, "init": {}}],
         "wrapper": [
             {
-                "class": QMultiBodyEnvWrapper,
+                "class": DQNMultiBodyEnvWrapper,
                 "init": {
                     "state_low": [-3.5, -0.4, -10.0, -10.0],
                     "state_high": [3.5, +0.4, 10.0, 10.0],
                     "action_low": -10.0,
                     "action_high": 10.0,
-                    "n_obs_splits": 5,
                     "n_action_splits": 5,
                 },
             }
@@ -174,7 +173,7 @@ if __name__ == "__main__":
 
     # エージェントの設定
     # agent_config = {"class": LQRAgent, "init": {}, "reset": {"Q": Q, "R": R}}
-    agent_config = {"class": QAgent, "init": {}, "reset": {"eps_update_freq": 1, "n_batches": 1}}
+    agent_config = {"class": DQNAgent, "init": {}, "reset": {}}
 
     # バッファの設定
     buffer_config = {"class": Buffer, "init": {"maxlen": None}, "reset": {}}
@@ -183,5 +182,5 @@ if __name__ == "__main__":
     runner = Runner(env_config, agent_config, buffer_config)
     runner.reset()
     # runner.run(2)
-    runner.run(10000000, trainfreq=1)
+    runner.run(100000, trainfreq=1)
     runner.evaluate("result")
