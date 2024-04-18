@@ -254,25 +254,15 @@ class QMultiBodyEnvWrapper(MultiBodyEnvWrapper):
             ],
             dtype=np.float64,
         ).T
-        self.discrete_actions = (
-            np.array(
-                [
-                    [
-                        val.reshape(-1)
-                        for val in np.meshgrid(
-                            *[
-                                np.linspace(low, high, n_action_splits)
-                                for low, high in zip(action_low_idx, action_high_idx)
-                            ]
-                        )
-                    ]
-                    for action_low_idx, action_high_idx in zip(self.action_low, self.action_high)
-                ],
-                dtype=np.float64,
-            )
-            .swapaxes(2, 1)
-            .swapaxes(1, 0)
-        )
+        self.discrete_actions = np.array(
+            [
+                val.reshape(-1)
+                for val in np.meshgrid(
+                    *[np.linspace(low, high, n_action_splits) for low, high in zip(self.action_low, self.action_high)]
+                )
+            ],
+            dtype=np.float64,
+        ).T
         self.n_obs_splits = n_obs_splits
         self.n_action_splits = n_action_splits
 
@@ -290,9 +280,7 @@ class QMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         return obs
 
     def convert_action(self, action: int) -> np.ndarray:
-        K = self.discrete_actions[action]
-        s = self.get_state(self.env.unwrapped.x)
-        return K @ s
+        return self.discrete_actions[action]
 
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
         truncated = self.get_truncated(t, x, u)
@@ -326,3 +314,7 @@ class QMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         return super().reset(
             initial_t=initial_t, initial_x=initial_x, target_x=target_x, integral_method=integral_method, **kwargs
         )
+
+    def step(self, action: np.ndarray) -> Tuple[np.ndarray | float | bool | Dict[str, bool | float | np.ndarray]]:
+        self.prev_s = self.get_state(self.env.unwrapped.x)
+        return super().step(action)

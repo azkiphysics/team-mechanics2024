@@ -54,34 +54,31 @@ class Runner(object):
         self.run_result.reset()
         self.evaluate_result.reset()
 
-    def run(self, n_episodes: int, trainfreq: int | None = None) -> Dict[str, float]:
-        k_timesteps = 0
-        for k_episodes in tqdm(range(n_episodes)):
-            k_steps = 0
-            total_rewards = 0.0
-            obs, _ = self.env.reset(**self.env_config["reset"])
-            self.agent.reset(**self.agent_config["reset"])
-            while True:
-                k_timesteps += 1
-                k_steps += 1
-                action = self.agent.act(obs)
-                next_obs, reward, terminated, truncated, _ = self.env.step(action)
-                done = terminated or truncated
-                self.buffer.push(
-                    {
-                        "obs": obs.copy(),
-                        "next_obs": next_obs.copy(),
-                        "action": action.copy(),
-                        "reward": reward,
-                        "done": done,
-                    }
-                )
-                total_rewards += reward
-                if trainfreq is not None and trainfreq > 0 and k_timesteps % trainfreq == 0:
-                    self.agent.train(buffer=self.buffer)
-                if done:
-                    break
-                obs = next_obs.copy()
+    def run(self, total_timesteps: int, trainfreq: int | None = None) -> Dict[str, float]:
+        k_episodes = 0
+        total_rewards = 0.0
+        obs, _ = self.env.reset(**self.env_config["reset"])
+        for k_timesteps in tqdm(range(total_timesteps)):
+            action = self.agent.act(obs)
+            next_obs, reward, terminated, truncated, _ = self.env.step(action)
+            done = terminated or truncated
+            self.buffer.push(
+                {
+                    "obs": obs.copy(),
+                    "next_obs": next_obs.copy(),
+                    "action": action.copy(),
+                    "reward": reward,
+                    "done": done,
+                }
+            )
+            total_rewards += reward
+            if trainfreq is not None and trainfreq > 0 and k_timesteps % trainfreq == 0:
+                self.agent.train(buffer=self.buffer)
+            if done:
+                k_episodes = 0
+                total_rewards = 0.0
+                obs, _ = self.env.reset(**self.env_config["reset"])
+            obs = next_obs.copy()
             self.run_result.push({"episode": k_episodes, "total_rewards": total_rewards})
 
     def evaluate(self, savedir: str):
@@ -155,12 +152,12 @@ if __name__ == "__main__":
             {
                 "class": QMultiBodyEnvWrapper,
                 "init": {
-                    "state_low": [-2.5, -0.4, -3.0, -3.0],
-                    "state_high": [2.5, +0.4, 3.0, 3.0],
-                    "action_low": [[0.0, -60, 0.0, -15.0]],
-                    "action_high": [[2.0, -50, 3.0, -10.0]],
-                    "n_obs_splits": 6,
-                    "n_action_splits": 6,
+                    "state_low": [-3.5, -0.4, -10.0, -10.0],
+                    "state_high": [3.5, +0.4, 10.0, 10.0],
+                    "action_low": -10.0,
+                    "action_high": 10.0,
+                    "n_obs_splits": 5,
+                    "n_action_splits": 5,
                 },
             }
         ],
@@ -177,7 +174,7 @@ if __name__ == "__main__":
 
     # エージェントの設定
     # agent_config = {"class": LQRAgent, "init": {}, "reset": {"Q": Q, "R": R}}
-    agent_config = {"class": QAgent, "init": {}, "reset": {"eps_update_freq": 10, "n_batches": 1}}
+    agent_config = {"class": QAgent, "init": {}, "reset": {"eps_update_freq": 1, "n_batches": 1}}
 
     # バッファの設定
     buffer_config = {"class": Buffer, "init": {"maxlen": None}, "reset": {}}
@@ -186,5 +183,5 @@ if __name__ == "__main__":
     runner = Runner(env_config, agent_config, buffer_config)
     runner.reset()
     # runner.run(2)
-    runner.run(20, trainfreq=1)
+    runner.run(10000000, trainfreq=1)
     runner.evaluate("result")
