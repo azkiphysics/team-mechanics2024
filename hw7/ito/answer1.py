@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-from common.agents import Agent, LQRAgent, DQNAgent
+from common.agents import Agent, LQRAgent, DQNAgent, DDPGAgent
 from common.buffers import Buffer
 from common.envs import Env, CartPoleEnv
 from common.utils import MovieMaker
-from common.wrappers import LQRMultiBodyEnvWrapper, DQNMultiBodyEnvWrapper
+from common.wrappers import LQRMultiBodyEnvWrapper, DQNMultiBodyEnvWrapper, DDPGMultiBodyEnvWrapper
 
 # Matplotlibで綺麗な論文用のグラフを作る
 # https://qiita.com/MENDY/items/fe9b0c50383d8b2fd919
@@ -26,6 +26,15 @@ plt.rcParams["axes.grid"] = True  # make grid
 plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
 
 
+AGENTS = {"LQR": LQRAgent, "DQN": DQNAgent, "DDPG": DDPGAgent}
+ENVS = {"CartPole": CartPoleEnv}
+ENV_WRAPPERS = {
+    "LQRMultiBody": LQRMultiBodyEnvWrapper,
+    "DQNMultiBody": DQNMultiBodyEnvWrapper,
+    "DDPGMultiBody": DDPGMultiBodyEnvWrapper,
+}
+
+
 class Runner(object):
     def __init__(
         self,
@@ -38,8 +47,8 @@ class Runner(object):
         self.buffer_config = buffer_config
 
         self.env: Env = env_config["class"](**env_config["init"])
-        if "wrapper" in env_config:
-            for env_wrapper_config in self.env_config["wrapper"]:
+        if "wrappers" in env_config:
+            for env_wrapper_config in self.env_config["wrappers"]:
                 self.env = env_wrapper_config["class"](self.env, **env_wrapper_config["init"])
         self.agent: Agent = agent_config["class"](self.env, **agent_config["init"])
         self.buffer: Buffer = buffer_config["class"](**buffer_config["init"])
@@ -75,6 +84,7 @@ class Runner(object):
             if trainfreq is not None and trainfreq > 0 and k_timesteps % trainfreq == 0:
                 self.agent.train(buffer=self.buffer)
             if done:
+                print("total_rewards: ", total_rewards, self.env.unwrapped.t)
                 k_episodes = 0
                 total_rewards = 0.0
                 obs, _ = self.env.reset(**self.env_config["reset"])
@@ -108,6 +118,10 @@ class Runner(object):
         savefile = "evaluate_result.pickle"
         self.evaluate_result.save(savedir, savefile)
 
+        # 動画の保存
+        savefile = "evaluate_result.mp4"
+        self.movie_maker.make(savedir, 10.0, savefile=savefile)
+
         # 図の保存
         ts = np.array(self.evaluate_result.get()["t"], dtype=np.float64)
         states = np.array(self.evaluate_result.get()["s"], dtype=np.float64)
@@ -129,10 +143,6 @@ class Runner(object):
         savepath = os.path.join(savedir, savefile)
         fig.savefig(savepath, dpi=300)
 
-        # 動画の保存
-        savefile = "evaluate_result.mp4"
-        self.movie_maker.make(savedir, self.env.unwrapped.t_max, savefile=savefile)
-
 
 if __name__ == "__main__":
     args = argparse.ArgumentParser("Cart pole")
@@ -143,37 +153,48 @@ if __name__ == "__main__":
     target_x = initial_x.copy()
     target_x[0] = 1.0
     target_x[3] = np.pi / 2.0
-    Q = 100.0
-    R = 100.0
-    env_config = {
-        "class": CartPoleEnv,
-        # "wrapper": [{"class": LQRMultiBodyEnvWrapper, "init": {}}],
-        "wrapper": [
-            {
-                "class": DQNMultiBodyEnvWrapper,
-                "init": {
-                    "state_low": [-3.5, -0.4, -10.0, -10.0],
-                    "state_high": [3.5, +0.4, 10.0, 10.0],
-                    "action_low": -10.0,
-                    "action_high": 10.0,
-                    "n_action_splits": 5,
-                },
-            }
-        ],
-        "init": {"t_max": 15.0, "dt": 1e-3, "m_cart": 1.0, "m_ball": 1.0, "l_pole": 1.0},
-        "reset": {
-            "initial_t": 0.0,
-            "initial_x": initial_x,
-            "integral_method": "runge_kutta_method",
-            "target_x": target_x,
+    Q = 1.0
+    R = 1.0
+    env_name = "CartPole"
+    agent_name = "LQR"
+    env_wrapper_name = agent_name + "MultiBody"
+    if env_wrapper_name == "LQRMultiBody":
+        env_wrapper_config = {"class": ENV_WRAPPERS[env_wrapper_name], "init": {}}
+        agent_reset_config = {
             "Q": Q,
             "R": R,
-        },
+        }
+    else:
+        env_wrapper_config = {
+            "class": ENV_WRAPPERS[env_wrapper_name],
+            "init": {
+                "state_low": [-3.5, -0.8, -10.0, -10.0],
+                "state_high": [3.5, 0.8, 10.0, 10.0],
+                "action_low": -20.0,
+                "action_high": 20.0,
+                "n_action_splits": 2,
+                "t_interval": None,
+            },
+        }
+        agent_reset_config = {}
+    env_init_config = {"t_max": 15.0, "dt": 1e-3, "m_cart": 1.0, "m_ball": 1.0, "l_pole": 1.0}
+    env_reset_config = {
+        "initial_t": 0.0,
+        "initial_x": initial_x,
+        "integral_method": "runge_kutta_method",
+        "target_x": target_x,
+        "Q": Q,
+        "R": R,
+    }
+    env_config = {
+        "class": ENVS[env_name],
+        "wrappers": [env_wrapper_config],
+        "init": env_init_config,
+        "reset": env_reset_config,
     }
 
     # エージェントの設定
-    # agent_config = {"class": LQRAgent, "init": {}, "reset": {"Q": Q, "R": R}}
-    agent_config = {"class": DQNAgent, "init": {}, "reset": {}}
+    agent_config = {"class": AGENTS[agent_name], "init": {}, "reset": agent_reset_config}
 
     # バッファの設定
     buffer_config = {"class": Buffer, "init": {"maxlen": None}, "reset": {}}

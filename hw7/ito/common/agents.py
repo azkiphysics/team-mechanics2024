@@ -5,8 +5,13 @@ import torch.nn.functional as F
 
 from .buffers import Buffer
 from .envs import Env
-from .utils import Box, Discrete
-from .wrappers import Wrapper, LQRMultiBodyEnvWrapper, QMultiBodyEnvWrapper, DQNMultiBodyEnvWrapper
+from .wrappers import (
+    Wrapper,
+    LQRMultiBodyEnvWrapper,
+    QMultiBodyEnvWrapper,
+    DQNMultiBodyEnvWrapper,
+    DDPGMultiBodyEnvWrapper,
+)
 
 
 class Agent(object):
@@ -50,7 +55,7 @@ class LQRAgent(Agent):
         P = S2 @ np.linalg.inv(S1)
         self.K = (-np.linalg.inv(self.R) @ B.T @ P).real
 
-    def act(self, obs: np.ndarray):
+    def act(self, obs: np.ndarray) -> np.ndarray:
         return (self.K @ obs).astype(self.env.action_space.dtype)
 
 
@@ -65,7 +70,7 @@ class QAgent(Agent):
         self.initial_eps: float = None
         self.decay: float = None
         self.gamma: float = None
-        self.n_batches: int = None
+        self.batch_size: int = None
 
     def reset(
         self,
@@ -74,7 +79,7 @@ class QAgent(Agent):
         decay: float = 0.01,
         learning_rate: float = 0.5,
         gamma: float = 0.99,
-        n_batches: int = 1,
+        batch_size: int = 1,
         eps_update_freq: int = 100,
         is_evaluate: bool = False,
         **kwargs,
@@ -86,11 +91,11 @@ class QAgent(Agent):
         self.decay = decay
         self.learning_rate = learning_rate
         self.gamma = gamma
-        self.n_batches = n_batches
+        self.batch_size = batch_size
         self.eps_update_freq = eps_update_freq
         self.is_evaluate = is_evaluate
 
-    def act(self, obs: np.ndarray):
+    def act(self, obs: np.ndarray) -> np.int64:
         self.k_timesteps += 1
         if self.k_timesteps % self.eps_update_freq == 0:
             self.k_decay += 1
@@ -101,7 +106,7 @@ class QAgent(Agent):
             return np.argmax(self.q_table[obs])
 
     def train(self, buffer: Buffer, **kwargs):
-        data = buffer.sample(self.n_batches)
+        data = buffer.sample(self.batch_size)
         obs = np.array(data["obs"], dtype=np.int64)
         action = np.array(data["action"], dtype=np.int64).reshape(-1)
         next_obs = np.array(data["next_obs"], dtype=np.int64)
@@ -116,23 +121,46 @@ class QAgent(Agent):
         self.q_table[obs] += self.learning_rate * one_hot_action * td_error
 
 
-class DQNAgent(Agent):
+class DRLAgent(Agent):
+    def get_device(self, device: torch.device | str = "auto") -> torch.device:
+        """
+        Retrieve PyTorch device.
+        It checks that the requested device is available first.
+        For now, it supports only cpu and cuda.
+        By default, it tries to use the gpu.
+
+        :param device: One for 'auto', 'cuda', 'cpu'
+        :return: Supported Pytorch device
+        """
+        # Cuda by default
+        if device == "auto":
+            device = "cuda"
+        # Force conversion to torch.device
+        device = torch.device(device)
+
+        # Cuda not available
+        if device.type == torch.device("cuda").type and not torch.cuda.is_available():
+            return torch.device("cpu")
+
+        return device
+
+
+class DQNAgent(DRLAgent):
     def __init__(
         self,
         env: DQNMultiBodyEnvWrapper,
         eps_low: float = 0.01,
         initial_eps: float = 1.0,
         decay: float = 0.01,
-        learning_rate: float = 1e-4,
+        learning_rate: float = 1e-3,
         gamma: float = 0.99,
-        n_batches: int = 1,
-        eps_update_freq: int = 100,
+        batch_size: int = 64,
+        eps_update_freq: int = 10,
         tau: float = 1.0,
         target_update_interval: int = 10000,
+        max_grad_norm: float = 10.0,
         device: torch.device | str = "auto",
     ) -> None:
-        assert isinstance(env.observation_space, Box)
-        assert isinstance(env.action_space, Discrete)
         self.env = env
 
         n_observations = env.observation_space.shape[0]
@@ -163,37 +191,16 @@ class DQNAgent(Agent):
         self.decay = decay
         self.learning_rate = learning_rate
         self.gamma = gamma
-        self.n_batches = n_batches
+        self.batch_size = batch_size
         self.eps_update_freq = eps_update_freq
         self.tau = tau
         self.target_update_interval = target_update_interval
+        self.max_grad_norm = max_grad_norm
 
         self.k_timesteps: int = None
         self.is_evaluate: bool = None
         self.k_trains: int = None
         self.k_decay: int = None
-
-    def get_device(self, device: torch.device | str = "auto") -> torch.device:
-        """
-        Retrieve PyTorch device.
-        It checks that the requested device is available first.
-        For now, it supports only cpu and cuda.
-        By default, it tries to use the gpu.
-
-        :param device: One for 'auto', 'cuda', 'cpu'
-        :return: Supported Pytorch device
-        """
-        # Cuda by default
-        if device == "auto":
-            device = "cuda"
-        # Force conversion to torch.device
-        device = torch.device(device)
-
-        # Cuda not available
-        if device.type == torch.device("cuda").type and not torch.cuda.is_available():
-            return torch.device("cpu")
-
-        return device
 
     def reset(self, is_evaluate: bool = False, **kwargs):
         self.k_timesteps = 0
@@ -201,7 +208,7 @@ class DQNAgent(Agent):
         self.k_trains = 0
         self.is_evaluate = is_evaluate
 
-    def act(self, obs: np.ndarray):
+    def act(self, obs: np.ndarray) -> np.int64:
         self.k_timesteps += 1
         if self.k_timesteps % self.eps_update_freq == 0:
             self.k_decay += 1
@@ -221,7 +228,8 @@ class DQNAgent(Agent):
         self.k_trains += 1
         self.q_network.train(True)
 
-        data = buffer.sample(self.n_batches)
+        # サンプルデータをtorch.tensorに変換
+        data = buffer.sample(self.batch_size)
         obs_pt = torch.tensor(np.array(data["obs"], dtype=np.float32), dtype=torch.float32, device=self.device)
         action = np.array(data["action"], dtype=np.int64).reshape(-1)
         one_hot_action_pt = torch.tensor(
@@ -237,17 +245,20 @@ class DQNAgent(Agent):
             np.array(data["done"], dtype=np.float32).reshape(-1, 1), dtype=torch.float32, device=self.device
         )
 
+        # Q-networkの更新
         q_pt = torch.sum(one_hot_action_pt * self.q_network(obs_pt), dim=1, keepdim=True)
         with torch.no_grad():
-            next_q_pt = torch.max(self.target_q_network(next_obs_pt), dim=1, keepdim=True)[0]
+            next_q_pt, _ = torch.max(self.target_q_network(next_obs_pt), dim=1, keepdim=True)
             target_q_pt = reward_pt + self.gamma * (1.0 - done_pt) * next_q_pt
         # loss_pt = 0.5 * F.mse_loss(q_pt, target_q_pt)
         loss_pt = 0.5 * F.smooth_l1_loss(q_pt, target_q_pt)
         self.optimizer.zero_grad()
+        nn.utils.clip_grad_norm_(self.q_network.parameters(), self.max_grad_norm)
         loss_pt.backward()
         self.optimizer.step()
 
         if self.k_trains % self.target_update_interval == 0:
+            # Target networkの更新 (Polyak update)
             with torch.no_grad():
                 for param, target_param in zip(
                     self.q_network.parameters(),
@@ -261,4 +272,161 @@ class DQNAgent(Agent):
                         out=target_param.data,
                     )
 
+        self.q_network.train(False)
+
+
+class DDPGAgent(DRLAgent):
+    def __init__(
+        self,
+        env: DDPGMultiBodyEnvWrapper,
+        actor_learning_rate: float = 1e-3,
+        critic_learning_rate: float = 1e-3,
+        gamma: float = 0.99,
+        batch_size: int = 256,
+        tau: float = 0.005,
+        max_grad_norm: float = 10.0,
+        action_noise: float = 0.1,
+        device: torch.device | str = "auto",
+    ) -> None:
+        self.env = env
+        n_observations = env.observation_space.shape[0]
+        n_actions = env.action_space.shape[0]
+        self.device = self.get_device(device=device)
+
+        self.policy = nn.Sequential(
+            nn.Linear(n_observations, 400),
+            nn.ReLU(),
+            nn.Linear(400, 300),
+            nn.ReLU(),
+            nn.Linear(300, n_actions),
+        ).to(self.device)
+        self.target_policy = nn.Sequential(
+            nn.Linear(n_observations, 400),
+            nn.ReLU(),
+            nn.Linear(400, 300),
+            nn.ReLU(),
+            nn.Linear(300, n_actions),
+        ).to(self.device)
+        self.target_policy.load_state_dict(self.policy.state_dict())
+        self.target_policy.train(False)
+
+        self.q_network = nn.Sequential(
+            nn.Linear(n_observations + n_actions, 400),
+            nn.ReLU(),
+            nn.Linear(400, 300),
+            nn.ReLU(),
+            nn.Linear(300, 1),
+        ).to(self.device)
+        self.target_q_network = nn.Sequential(
+            nn.Linear(n_observations + n_actions, 400),
+            nn.ReLU(),
+            nn.Linear(400, 300),
+            nn.ReLU(),
+            nn.Linear(300, 1),
+        ).to(self.device)
+        self.target_q_network.load_state_dict(self.q_network.state_dict())
+        self.target_q_network.train(False)
+
+        self.actor_optimizer = torch.optim.Adam(self.policy.parameters(), lr=actor_learning_rate)
+        self.critic_optimizer = torch.optim.Adam(self.q_network.parameters(), lr=critic_learning_rate)
+
+        self.actor_learning_rate = actor_learning_rate
+        self.critic_learning_rate = critic_learning_rate
+        self.gamma = gamma
+        self.batch_size = batch_size
+        self.tau = tau
+        self.max_grad_norm = max_grad_norm
+        self.action_noise = action_noise
+
+        self.is_evaluate: bool = None
+
+    def reset(self, is_evaluate: bool = False, **kwargs):
+        self.is_evaluate = is_evaluate
+
+    def act(self, obs: np.ndarray):
+        obs_pt = torch.tensor(
+            obs.reshape(-1, self.env.observation_space.shape[0]), dtype=torch.float32, device=self.device
+        )
+        with torch.no_grad():
+            scaled_action_pt: torch.Tensor = self.policy(obs_pt)
+        scaled_action: np.ndarray = scaled_action_pt.to("cpu").detach().numpy()[0]
+        if self.is_evaluate:
+            noise = np.zeros_like(scaled_action, dtype=np.float32)
+        else:
+            noise = np.random.normal(0.0, self.action_noise, scaled_action.shape[0]).astype(np.float32)
+
+        clipped_ratio = (1.0 + np.clip(scaled_action + noise, -1.0, 1.0)) / 2.0
+        low = self.env.action_space.low
+        high = self.env.action_space.high
+        clipped_action = low + (high - low) * clipped_ratio
+        # print(clipped_action)
+        return clipped_action
+
+    def train(self, buffer: Buffer, **kwargs):
+        self.policy.train(True)
+        self.q_network.train(True)
+
+        # サンプルデータをtorch.tensorに変換
+        data = buffer.sample(self.batch_size)
+        obs_pt = torch.tensor(np.array(data["obs"], dtype=np.float32), dtype=torch.float32, device=self.device)
+        action_pt = torch.tensor(np.array(data["action"], dtype=np.float32), dtype=torch.float32, device=self.device)
+        next_obs_pt = torch.tensor(
+            np.array(data["next_obs"], dtype=np.float32), dtype=torch.float32, device=self.device
+        )
+        reward_pt = torch.tensor(
+            np.array(data["reward"], dtype=np.float32).reshape(-1, 1), dtype=torch.float32, device=self.device
+        )
+        done_pt = torch.tensor(
+            np.array(data["done"], dtype=np.float32).reshape(-1, 1), dtype=torch.float32, device=self.device
+        )
+
+        # Q-networkの更新
+        obs_action_pt = torch.cat([obs_pt, action_pt], dim=1)
+        q_pt = self.q_network(obs_action_pt)
+        with torch.no_grad():
+            target_next_action_pt = self.target_policy(next_obs_pt)
+            next_obs_target_next_action_pt = torch.cat([next_obs_pt, target_next_action_pt], dim=1)
+            target_next_q_pt = self.target_q_network(next_obs_target_next_action_pt)
+            target_q_pt = reward_pt + self.gamma * (1.0 - done_pt) * target_next_q_pt
+        critic_loss_pt = F.mse_loss(q_pt, target_q_pt)
+        self.critic_optimizer.zero_grad()
+        # nn.utils.clip_grad_norm_(self.q_network.parameters(), self.max_grad_norm)
+        critic_loss_pt.backward()
+        self.critic_optimizer.step()
+
+        # Policyの更新
+        action_pi_pt = self.policy(obs_pt)
+        obs_action_pi_pt = torch.concat([obs_pt, action_pi_pt], dim=1)
+        q_pi_pt = self.q_network(obs_action_pi_pt)
+        actor_loss_pt = -torch.mean(q_pi_pt)
+        self.actor_optimizer.zero_grad()
+        # nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
+        actor_loss_pt.backward()
+
+        # Target networkの更新 (Polyak update)
+        with torch.no_grad():
+            for param, target_param in zip(
+                self.q_network.parameters(),
+                self.target_q_network.parameters(),
+            ):
+                target_param.data.mul_(1 - self.tau)
+                torch.add(
+                    target_param.data,
+                    param.data,
+                    alpha=self.tau,
+                    out=target_param.data,
+                )
+            for param, target_param in zip(
+                self.policy.parameters(),
+                self.target_policy.parameters(),
+            ):
+                target_param.data.mul_(1 - self.tau)
+                torch.add(
+                    target_param.data,
+                    param.data,
+                    alpha=self.tau,
+                    out=target_param.data,
+                )
+
+        self.policy.train(False)
         self.q_network.train(False)

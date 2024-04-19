@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
@@ -15,6 +16,7 @@ class Env(object):
         self.t_max = t_max
         self.dt = dt
 
+        self.initial_t: float = None
         self.t: float = None
         self.x: np.ndarray | None = None
         self.integral_method: str | None = None
@@ -105,6 +107,8 @@ class Env(object):
     ) -> Tuple[np.ndarray, Dict[str, bool | float | np.ndarray]]:
         """シミュレーションの初期化"""
         self.integral_method = integral_method
+        self.initial_t = initial_t
+        self.initial_x = initial_x.copy()
         self.t = initial_t
         self.x = initial_x.copy()
         s = self.get_state(self.x)
@@ -133,7 +137,7 @@ class Env(object):
         raise NotImplementedError()
 
     @property
-    def unwrapped(self):
+    def unwrapped(self) -> Env:
         return self
 
 
@@ -237,10 +241,7 @@ class MultiBodyEnv(Env):
         return x
 
     def reset(
-        self,
-        initial_t: float,
-        initial_x: np.ndarray,
-        integral_method: str = "runge_kutta_method",
+        self, initial_t: float, initial_x: np.ndarray, integral_method: str = "runge_kutta_method", **kwargs
     ) -> Tuple[np.ndarray, Dict[str, bool | float | np.ndarray]]:
         """シミュレーションの初期化"""
         _, info = super().reset(initial_t, initial_x, integral_method=integral_method)
@@ -263,6 +264,10 @@ class MultiBodyEnv(Env):
         C = self.compute_C(self.t, self.x)
         info |= {"x": self.x.copy(), "e": e, "C": C.copy(), "s": s.copy()}
         return obs, reward, terminated, truncated, info
+
+    @property
+    def unwrapped(self) -> MultiBodyEnv:
+        return self
 
 
 class CartPoleEnv(MultiBodyEnv):

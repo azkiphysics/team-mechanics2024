@@ -84,7 +84,6 @@ class MultiBodyEnvWrapper(Wrapper):
     def __init__(self, env: MultiBodyEnv) -> None:
         self.env = env
 
-        self.initial_t: float = None
         self.target_x: np.ndarray = None
 
     def get_state(self, x: np.ndarray) -> np.ndarray:
@@ -98,10 +97,15 @@ class MultiBodyEnvWrapper(Wrapper):
         initial_t: float,
         initial_x: np.ndarray,
         target_x: np.ndarray,
+        Q: float | np.ndarray,
+        R: float | np.ndarray,
         integral_method: str = "runge_kutta_method",
         **kwargs,
     ) -> Tuple[np.ndarray | Dict[str, bool | float | np.ndarray]]:
-        self.initial_t = initial_t
+        n_obs = self.observation_space.shape[0]
+        n_us = self.u_space.shape[0]
+        self.Q = Q * np.identity(n_obs, dtype=np.float64)
+        self.R = R * np.identity(n_us, dtype=np.float64)
         self.target_x = self.env.unwrapped.newton_raphson_method(initial_t, target_x)
         return super().reset(initial_t=initial_t, initial_x=initial_x, integral_method=integral_method, **kwargs)
 
@@ -143,7 +147,7 @@ class LQRMultiBodyEnvWrapper(MultiBodyEnvWrapper):
 
     @property
     def A(self) -> np.ndarray:
-        assert self.initial_t is not None and self.target_x is not None
+        assert self.env.unwrapped.initial_t is not None and self.target_x is not None
         state_indices = self.env.unwrapped.get_state_indices()
         n_states = len(state_indices)
         A = np.zeros((n_states, n_states), dtype=np.float64)
@@ -153,18 +157,18 @@ class LQRMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         for idx in range(n_states):
             target_x_plus = self.target_x.copy()
             target_x_plus[state_indices[idx]] += h
-            ddqi_plus = self.compute_ddqi(self.initial_t, target_x_plus, u)
+            ddqi_plus = self.compute_ddqi(self.env.unwrapped.initial_t, target_x_plus, u)
 
             target_x_minus = self.target_x.copy()
             target_x_minus[state_indices[idx]] -= h
-            ddqi_minus = self.compute_ddqi(self.initial_t, target_x_minus, u)
+            ddqi_minus = self.compute_ddqi(self.env.unwrapped.initial_t, target_x_minus, u)
 
             A[n_states // 2 :, idx] = (ddqi_plus - ddqi_minus) / (2 * h)
         return A
 
     @property
     def B(self) -> np.ndarray:
-        assert self.initial_t is not None and self.target_x is not None
+        assert self.env.unwrapped.initial_t is not None and self.target_x is not None
         state_indices = self.env.unwrapped.get_state_indices()
         n_states = len(state_indices)
         n_us = self.env.unwrapped.u_space.shape[0]
@@ -174,11 +178,11 @@ class LQRMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         for idx in range(n_us):
             u_plus = u.copy()
             u_plus[idx] += h
-            ddqi_plus = self.compute_ddqi(self.initial_t, self.target_x, u_plus)
+            ddqi_plus = self.compute_ddqi(self.env.unwrapped.initial_t, self.target_x, u_plus)
 
             u_minus = u.copy()
             u_minus[idx] -= h
-            ddqi_minus = self.compute_ddqi(self.initial_t, self.target_x, u_minus)
+            ddqi_minus = self.compute_ddqi(self.env.unwrapped.initial_t, self.target_x, u_minus)
 
             B[n_states // 2 :, idx] = (ddqi_plus - ddqi_minus) / (2 * h)
         return B
@@ -200,26 +204,53 @@ class LQRMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         cost = 0.5 * (s @ self.Q @ s + u @ self.R @ u) * self.env.unwrapped.dt
         return -cost
 
-    def reset(
+
+class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
+    def __init__(
         self,
-        initial_t: float,
-        initial_x: np.ndarray,
-        target_x: np.ndarray,
-        Q: float | np.ndarray,
-        R: float | np.ndarray,
-        integral_method: str = "runge_kutta_method",
-        **kwargs,
-    ) -> Tuple[np.ndarray | Dict[str, bool | float | np.ndarray]]:
-        n_obs = self.observation_space.shape[0]
-        n_us = self.u_space.shape[0]
-        self.Q = Q * np.identity(n_obs, dtype=np.float64)
-        self.R = R * np.identity(n_us, dtype=np.float64)
-        return super().reset(
-            initial_t=initial_t, initial_x=initial_x, target_x=target_x, integral_method=integral_method, **kwargs
+        env: MultiBodyEnv,
+        state_low: float | list | np.ndarray,
+        state_high: float | list | np.ndarray,
+        action_low: float | list | np.ndarray,
+        action_high: float | list | np.ndarray,
+        t_interval: float | None = None,
+    ) -> None:
+        super().__init__(env)
+        self.state_low = np.array(state_low) * np.ones(
+            self.env.unwrapped.observation_space.shape, dtype=self.env.unwrapped.observation_space.dtype
         )
+        self.state_high = np.array(state_high) * np.ones(
+            self.env.unwrapped.observation_space.shape, dtype=self.env.unwrapped.observation_space.dtype
+        )
+        self.action_low = np.array(action_low, dtype=self.env.unwrapped.action_space.dtype)
+        self.action_high = np.array(action_high, dtype=self.env.unwrapped.action_space.dtype)
+        self.t_interval = t_interval if t_interval is not None else self.env.unwrapped.dt
+
+    def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
+        truncated = self.get_truncated(t, x, u)
+        s = self.get_state(x)
+        if truncated:
+            # reward = -0.5 * (s @ self.Q @ s + u @ self.R @ u) * (self.env.unwrapped.t_max - t)
+            reward = -1.0
+        else:
+            # reward = -0.5 * (s @ self.Q @ s + u @ self.R @ u) * self.env.unwrapped.dt
+            reward = 1.0
+        return reward
+
+    def get_truncated(self, t: float, x: np.ndarray, u: np.ndarray) -> bool:
+        truncated = super().get_truncated(t, x, u)
+        s = self.get_state(x)
+        truncated |= np.sum(s < self.state_low) > 0 or np.sum(s > self.state_high) > 0
+        return truncated
+
+    def step(self, action: np.ndarray) -> Tuple[np.ndarray | float | bool | Dict[str, bool | float | np.ndarray]]:
+        t_end = self.env.unwrapped.t + self.t_interval
+        while self.env.unwrapped.t < t_end:
+            next_obs, reward, terminated, truncated, info = super().step(action)
+        return next_obs, reward, terminated, truncated, info
 
 
-class QMultiBodyEnvWrapper(MultiBodyEnvWrapper):
+class QMultiBodyEnvWrapper(RLMultiBodyEnvWrapper):
     def __init__(
         self,
         env: MultiBodyEnv,
@@ -230,13 +261,7 @@ class QMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         n_obs_splits: int,
         n_action_splits: int,
     ) -> None:
-        super().__init__(env)
-        self.state_low = np.array(state_low) * np.ones(
-            self.env.unwrapped.observation_space.shape, dtype=self.env.unwrapped.observation_space.dtype
-        )
-        self.state_high = np.array(state_high) * np.ones(
-            self.env.unwrapped.observation_space.shape, dtype=self.env.unwrapped.observation_space.dtype
-        )
+        super().__init__(env, state_low, state_high, action_low, action_high)
         self.action_low = np.array(action_low) * np.ones(
             self.env.unwrapped.action_space.shape + self.env.unwrapped.observation_space.shape,
             dtype=self.env.unwrapped.action_space.dtype,
@@ -282,41 +307,8 @@ class QMultiBodyEnvWrapper(MultiBodyEnvWrapper):
     def convert_action(self, action: int) -> np.ndarray:
         return self.discrete_actions[action]
 
-    def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
-        truncated = self.get_truncated(t, x, u)
-        s = self.get_state(x)
-        if truncated:
-            reward = -0.5 * (s @ self.Q @ s + u @ self.R @ u) * (self.env.unwrapped.t_max - t)
-        else:
-            reward = -0.5 * (s @ self.Q @ s + u @ self.R @ u) * self.env.unwrapped.dt
-        return reward
 
-    def get_truncated(self, t: float, x: np.ndarray, u: np.ndarray) -> bool:
-        truncated = super().get_truncated(t, x, u)
-        s = self.get_state(x)
-        truncated |= np.sum(s < self.state_low) > 0 or np.sum(s > self.state_high) > 0
-        return truncated
-
-    def reset(
-        self,
-        initial_t: float,
-        initial_x: np.ndarray,
-        target_x: np.ndarray,
-        Q: float | np.ndarray,
-        R: float | np.ndarray,
-        integral_method: str = "runge_kutta_method",
-        **kwargs,
-    ) -> Tuple[np.ndarray | Dict[str, bool | float | np.ndarray]]:
-        n_obs = self.env.unwrapped.observation_space.shape[0]
-        n_us = self.env.unwrapped.u_space.shape[0]
-        self.Q = Q * np.identity(n_obs, dtype=np.float64)
-        self.R = R * np.identity(n_us, dtype=np.float64)
-        return super().reset(
-            initial_t=initial_t, initial_x=initial_x, target_x=target_x, integral_method=integral_method, **kwargs
-        )
-
-
-class DQNMultiBodyEnvWrapper(MultiBodyEnvWrapper):
+class DQNMultiBodyEnvWrapper(RLMultiBodyEnvWrapper):
     def __init__(
         self,
         env: MultiBodyEnv,
@@ -326,20 +318,12 @@ class DQNMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         action_high: float | list | np.ndarray,
         n_action_splits: int,
     ) -> None:
-        super().__init__(env)
-        self.state_low = np.array(state_low) * np.ones(
-            self.env.unwrapped.observation_space.shape, dtype=self.env.unwrapped.observation_space.dtype
-        )
-        self.state_high = np.array(state_high) * np.ones(
-            self.env.unwrapped.observation_space.shape, dtype=self.env.unwrapped.observation_space.dtype
-        )
+        super().__init__(env, state_low, state_high, action_low, action_high)
         self.action_low = np.array(action_low) * np.ones(
-            self.env.unwrapped.action_space.shape + self.env.unwrapped.observation_space.shape,
-            dtype=self.env.unwrapped.action_space.dtype,
+            self.env.unwrapped.action_space.shape, dtype=self.env.unwrapped.action_space.dtype
         )
         self.action_high = np.array(action_high) * np.ones(
-            self.env.unwrapped.action_space.shape + self.env.unwrapped.observation_space.shape,
-            dtype=self.env.unwrapped.action_space.dtype,
+            self.env.unwrapped.action_space.shape, dtype=self.env.unwrapped.action_space.dtype
         )
         self.discrete_actions = np.array(
             [
@@ -359,35 +343,8 @@ class DQNMultiBodyEnvWrapper(MultiBodyEnvWrapper):
     def convert_action(self, action: int) -> np.ndarray:
         return self.discrete_actions[action]
 
-    def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
-        truncated = self.get_truncated(t, x, u)
-        s = self.get_state(x)
-        if truncated:
-            reward = -0.5 * (s @ self.Q @ s + u @ self.R @ u) * (self.env.unwrapped.t_max - t)
-        else:
-            reward = -0.5 * (s @ self.Q @ s + u @ self.R @ u) * self.env.unwrapped.dt
-        return reward
 
-    def get_truncated(self, t: float, x: np.ndarray, u: np.ndarray) -> bool:
-        truncated = super().get_truncated(t, x, u)
-        s = self.get_state(x)
-        truncated |= np.sum(s < self.state_low) > 0 or np.sum(s > self.state_high) > 0
-        return truncated
-
-    def reset(
-        self,
-        initial_t: float,
-        initial_x: np.ndarray,
-        target_x: np.ndarray,
-        Q: float | np.ndarray,
-        R: float | np.ndarray,
-        integral_method: str = "runge_kutta_method",
-        **kwargs,
-    ) -> Tuple[np.ndarray | Dict[str, bool | float | np.ndarray]]:
-        n_obs = self.env.unwrapped.observation_space.shape[0]
-        n_us = self.env.unwrapped.u_space.shape[0]
-        self.Q = Q * np.identity(n_obs, dtype=np.float64)
-        self.R = R * np.identity(n_us, dtype=np.float64)
-        return super().reset(
-            initial_t=initial_t, initial_x=initial_x, target_x=target_x, integral_method=integral_method, **kwargs
-        )
+class DDPGMultiBodyEnvWrapper(RLMultiBodyEnvWrapper):
+    @property
+    def action_space(self) -> Box:
+        return Box(self.action_low, self.action_high, shape=self.env.action_space.shape, dtype=np.float32)
