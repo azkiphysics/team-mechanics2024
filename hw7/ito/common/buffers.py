@@ -1,4 +1,5 @@
 import os
+import random
 import pickle
 from collections import defaultdict, deque
 from typing import Dict, List
@@ -31,7 +32,8 @@ class Buffer(object):
     def sample(self, n_samples: int) -> Dict[str, List[float | np.ndarray]]:
         if self.n_data == 0:
             return self.buffer
-        indices = np.random.randint(self.n_data, size=n_samples)
+        n_samples = min(self.n_data, n_samples)
+        indices = random.sample(range(self.n_data), n_samples)
         data = {key: [value[idx] for idx in indices] for key, value in self.buffer.items()}
         return data
 

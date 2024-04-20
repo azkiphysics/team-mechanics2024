@@ -265,12 +265,7 @@ class DQNAgent(DRLAgent):
                     self.target_q_network.parameters(),
                 ):
                     target_param.data.mul_(1 - self.tau)
-                    torch.add(
-                        target_param.data,
-                        param.data,
-                        alpha=self.tau,
-                        out=target_param.data,
-                    )
+                    target_param.data.add_(self.tau * param.data)
 
         self.q_network.train(False)
 
@@ -279,12 +274,11 @@ class DDPGAgent(DRLAgent):
     def __init__(
         self,
         env: DDPGMultiBodyEnvWrapper,
-        actor_learning_rate: float = 1e-3,
+        actor_learning_rate: float = 1e-4,
         critic_learning_rate: float = 1e-3,
         gamma: float = 0.99,
         batch_size: int = 256,
         tau: float = 0.005,
-        max_grad_norm: float = 10.0,
         action_noise: float = 0.1,
         device: torch.device | str = "auto",
     ) -> None:
@@ -299,6 +293,7 @@ class DDPGAgent(DRLAgent):
             nn.Linear(400, 300),
             nn.ReLU(),
             nn.Linear(300, n_actions),
+            nn.Tanh(),
         ).to(self.device)
         self.target_policy = nn.Sequential(
             nn.Linear(n_observations, 400),
@@ -306,6 +301,7 @@ class DDPGAgent(DRLAgent):
             nn.Linear(400, 300),
             nn.ReLU(),
             nn.Linear(300, n_actions),
+            nn.Tanh(),
         ).to(self.device)
         self.target_policy.load_state_dict(self.policy.state_dict())
         self.target_policy.train(False)
@@ -335,7 +331,6 @@ class DDPGAgent(DRLAgent):
         self.gamma = gamma
         self.batch_size = batch_size
         self.tau = tau
-        self.max_grad_norm = max_grad_norm
         self.action_noise = action_noise
 
         self.is_evaluate: bool = None
@@ -348,7 +343,7 @@ class DDPGAgent(DRLAgent):
             obs.reshape(-1, self.env.observation_space.shape[0]), dtype=torch.float32, device=self.device
         )
         with torch.no_grad():
-            scaled_action_pt: torch.Tensor = self.policy(obs_pt)
+            scaled_action_pt: torch.Tensor = self.policy.forward(obs_pt)
         scaled_action: np.ndarray = scaled_action_pt.to("cpu").detach().numpy()[0]
         if self.is_evaluate:
             noise = np.zeros_like(scaled_action, dtype=np.float32)
@@ -359,17 +354,18 @@ class DDPGAgent(DRLAgent):
         low = self.env.action_space.low
         high = self.env.action_space.high
         clipped_action = low + (high - low) * clipped_ratio
-        # print(clipped_action)
         return clipped_action
 
     def train(self, buffer: Buffer, **kwargs):
-        self.policy.train(True)
-        self.q_network.train(True)
+        low_pt = torch.tensor(self.env.action_space.low, dtype=torch.float32, device=self.device)
+        high_pt = torch.tensor(self.env.action_space.high, dtype=torch.float32, device=self.device)
 
         # サンプルデータをtorch.tensorに変換
         data = buffer.sample(self.batch_size)
         obs_pt = torch.tensor(np.array(data["obs"], dtype=np.float32), dtype=torch.float32, device=self.device)
-        action_pt = torch.tensor(np.array(data["action"], dtype=np.float32), dtype=torch.float32, device=self.device)
+        action_pt = -1.0 + 2.0 * (
+            torch.tensor(np.array(data["action"], dtype=np.float32), dtype=torch.float32, device=self.device) - low_pt
+        ) / (high_pt - low_pt)
         next_obs_pt = torch.tensor(
             np.array(data["next_obs"], dtype=np.float32), dtype=torch.float32, device=self.device
         )
@@ -381,27 +377,30 @@ class DDPGAgent(DRLAgent):
         )
 
         # Q-networkの更新
+        self.q_network.train(True)
         obs_action_pt = torch.cat([obs_pt, action_pt], dim=1)
-        q_pt = self.q_network(obs_action_pt)
+        q_pt = self.q_network.forward(obs_action_pt)
         with torch.no_grad():
-            target_next_action_pt = self.target_policy(next_obs_pt)
+            target_next_action_pt = self.target_policy.forward(next_obs_pt).clamp(-1, 1)
             next_obs_target_next_action_pt = torch.cat([next_obs_pt, target_next_action_pt], dim=1)
             target_next_q_pt = self.target_q_network(next_obs_target_next_action_pt)
             target_q_pt = reward_pt + self.gamma * (1.0 - done_pt) * target_next_q_pt
         critic_loss_pt = F.mse_loss(q_pt, target_q_pt)
         self.critic_optimizer.zero_grad()
-        # nn.utils.clip_grad_norm_(self.q_network.parameters(), self.max_grad_norm)
         critic_loss_pt.backward()
         self.critic_optimizer.step()
+        self.q_network.train(False)
 
         # Policyの更新
-        action_pi_pt = self.policy(obs_pt)
+        self.policy.train(True)
+        action_pi_pt = self.policy.forward(obs_pt).clamp(-1, 1)
         obs_action_pi_pt = torch.concat([obs_pt, action_pi_pt], dim=1)
-        q_pi_pt = self.q_network(obs_action_pi_pt)
-        actor_loss_pt = -torch.mean(q_pi_pt)
+        q_pi_pt = self.q_network.forward(obs_action_pi_pt)
+        actor_loss_pt = -q_pi_pt.mean()
         self.actor_optimizer.zero_grad()
-        # nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
         actor_loss_pt.backward()
+        self.actor_optimizer.step()
+        self.policy.train(False)
 
         # Target networkの更新 (Polyak update)
         with torch.no_grad():
@@ -410,23 +409,10 @@ class DDPGAgent(DRLAgent):
                 self.target_q_network.parameters(),
             ):
                 target_param.data.mul_(1 - self.tau)
-                torch.add(
-                    target_param.data,
-                    param.data,
-                    alpha=self.tau,
-                    out=target_param.data,
-                )
+                target_param.data.add_(self.tau * param.data)
             for param, target_param in zip(
                 self.policy.parameters(),
                 self.target_policy.parameters(),
             ):
                 target_param.data.mul_(1 - self.tau)
-                torch.add(
-                    target_param.data,
-                    param.data,
-                    alpha=self.tau,
-                    out=target_param.data,
-                )
-
-        self.policy.train(False)
-        self.q_network.train(False)
+                target_param.data.add_(self.tau * param.data)
