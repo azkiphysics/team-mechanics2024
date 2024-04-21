@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim.lr_scheduler import LinearLR
 
 from .buffers import Buffer
 from .envs import Env
@@ -159,6 +160,8 @@ class DQNAgent(DRLAgent):
         tau: float = 1.0,
         target_update_interval: int = 1000,
         max_grad_norm: float = 10.0,
+        scheduler_last_ratio: float = 1.0,
+        scheduler_iters: int = 0,
         device: torch.device | str = "auto",
     ) -> None:
         self.env = env
@@ -185,6 +188,7 @@ class DQNAgent(DRLAgent):
         self.target_q_network.train(False)
 
         self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=learning_rate)
+        self.scheduler = LinearLR(self.optimizer, 1.0, scheduler_last_ratio, total_iters=scheduler_iters)
 
         self.eps_low = eps_low
         self.initial_eps = initial_eps
@@ -256,6 +260,7 @@ class DQNAgent(DRLAgent):
         nn.utils.clip_grad_norm_(self.q_network.parameters(), self.max_grad_norm)
         loss_pt.backward()
         self.optimizer.step()
+        self.scheduler.step()
 
         if self.k_trains % self.target_update_interval == 0:
             # Target networkの更新 (Polyak update)
@@ -280,6 +285,10 @@ class DDPGAgent(DRLAgent):
         batch_size: int = 256,
         tau: float = 0.005,
         action_noise: float = 0.1,
+        actor_scheduler_last_ratio: float = 1.0,
+        actor_scheduler_iters: int = 0,
+        critic_scheduler_last_ratio: float = 1.0,
+        critic_scheduler_iters: int = 0,
         device: torch.device | str = "auto",
     ) -> None:
         self.env = env
@@ -324,7 +333,13 @@ class DDPGAgent(DRLAgent):
         self.target_q_network.train(False)
 
         self.actor_optimizer = torch.optim.Adam(self.policy.parameters(), lr=actor_learning_rate)
+        self.actor_scheduler = LinearLR(
+            self.actor_optimizer, 1.0, actor_scheduler_last_ratio, total_iters=actor_scheduler_iters
+        )
         self.critic_optimizer = torch.optim.Adam(self.q_network.parameters(), lr=critic_learning_rate)
+        self.critic_scheduler = LinearLR(
+            self.critic_optimizer, 1.0, critic_scheduler_last_ratio, total_iters=critic_scheduler_iters
+        )
 
         self.actor_learning_rate = actor_learning_rate
         self.critic_learning_rate = critic_learning_rate
@@ -389,6 +404,7 @@ class DDPGAgent(DRLAgent):
         self.critic_optimizer.zero_grad()
         critic_loss_pt.backward()
         self.critic_optimizer.step()
+        self.critic_scheduler.step()
         self.q_network.train(False)
 
         # Policyの更新
@@ -400,6 +416,7 @@ class DDPGAgent(DRLAgent):
         self.actor_optimizer.zero_grad()
         actor_loss_pt.backward()
         self.actor_optimizer.step()
+        self.actor_scheduler.step()
         self.policy.train(False)
 
         # Target networkの更新 (Polyak update)

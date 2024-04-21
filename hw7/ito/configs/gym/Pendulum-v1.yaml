@@ -1,0 +1,27 @@
+env:
+  name: Pendulum-v1
+  init:
+    id: Pendulum-v1
+    render_mode: rgb_array
+  reset: {}
+  wrappers: []
+agent:
+  name: DDPG
+  init: {}
+  reset: {}
+buffer:
+  name: Buffer
+  init:
+    maxlen:
+  reset: {}
+runner:
+  name: Runner
+  init: {}
+  reset: {}
+  run:
+    total_timesteps: 200000
+    learning_starts: 10000
+    trainfreq: 1
+  evaluate:
+    savedir: results/Pendulum-v1/DDPG
+    moviefreq: 1

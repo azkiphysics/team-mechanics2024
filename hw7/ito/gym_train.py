@@ -1,9 +1,11 @@
+import argparse
 import logging
 from logging import getLogger, Formatter, StreamHandler
 from typing import Dict, List
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
+import yaml
 from tqdm import trange
 from tqdm.contrib.logging import logging_redirect_tqdm
 
@@ -32,8 +34,6 @@ plt.rcParams["ytick.direction"] = "in"  # y axis in
 plt.rcParams["axes.linewidth"] = 1.0  # axis line width
 plt.rcParams["axes.grid"] = True  # make grid
 plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
-
-AGENTS = {"DQN": DQNAgent, "DDPG": DDPGAgent}
 
 
 class Runner(object):
@@ -121,29 +121,45 @@ class Runner(object):
         self.movie_maker.make(savedir, 10.0, savefile=savefile)
 
 
+AGENTS = {"DQN": DQNAgent, "DDPG": DDPGAgent}
+BUFFERS = {"Buffer": Buffer}
+RUNNERS = {"Runner": Runner}
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser("Gymnasium training")
+    parser.add_argument("config_path", type=str)
+    args = parser.parse_args()
+
+    # configの読み込み
+    with open(args.config_path) as f:
+        config = yaml.safe_load(f)
+
     # 環境の設定
-    env_name = "CartPole-v1"
-    agent_name = "DQN"
     env_config = {
         "class": gym.make,
-        "wrappers": [],
-        "init": {"id": env_name, "render_mode": "rgb_array"},
-        "reset": {},
+        "wrappers": config["env"]["wrappers"],
+        "init": config["env"]["init"],
+        "reset": config["env"]["reset"],
     }
 
     # エージェントの設定
     agent_config = {
-        "class": AGENTS[agent_name],
-        "init": {"target_update_interval": 100, "learning_rate": 5e-4, "gamma": 0.99, "decay": 0.01},
-        "reset": {},
+        "class": AGENTS[config["agent"]["name"]],
+        "init": config["agent"]["init"],
+        "reset": config["agent"]["reset"],
     }
 
     # バッファの設定
-    buffer_config = {"class": Buffer, "init": {"maxlen": None}, "reset": {}}
+    buffer_config = {
+        "class": BUFFERS[config["buffer"]["name"]],
+        "init": config["buffer"]["init"],
+        "reset": config["buffer"]["reset"],
+    }
 
     # Runnerの設定
-    runner = Runner(env_config, agent_config, buffer_config)
-    runner.reset()
-    runner.run(200000, learning_starts=0, trainfreq=1)
-    runner.evaluate(f"result/{env_name}", movie_freq=1)
+    runner: Runner = RUNNERS[config["runner"]["name"]](
+        env_config, agent_config, buffer_config, **config["runner"]["init"]
+    )
+    runner.reset(**config["runner"]["reset"])
+    runner.run(**config["runner"]["run"])
+    runner.evaluate(**config["runner"]["evaluate"])
