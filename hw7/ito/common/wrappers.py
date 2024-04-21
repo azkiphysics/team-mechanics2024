@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 import numpy as np
 
 from .envs import Env, MultiBodyEnv
@@ -96,7 +96,7 @@ class MultiBodyEnvWrapper(Wrapper):
         self,
         initial_t: float,
         initial_x: np.ndarray,
-        target_x: np.ndarray,
+        target_x: List[float] | np.ndarray,
         Q: float | np.ndarray,
         R: float | np.ndarray,
         integral_method: str = "runge_kutta_method",
@@ -106,6 +106,8 @@ class MultiBodyEnvWrapper(Wrapper):
         n_us = self.u_space.shape[0]
         self.Q = Q * np.identity(n_obs, dtype=np.float64)
         self.R = R * np.identity(n_us, dtype=np.float64)
+        initial_x = np.array(initial_x, dtype=np.float64)
+        target_x = np.array(target_x, dtype=np.float64)
         self.target_x = self.env.unwrapped.newton_raphson_method(initial_t, target_x)
         return super().reset(initial_t=initial_t, initial_x=initial_x, integral_method=integral_method, **kwargs)
 
@@ -217,24 +219,18 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
     ) -> None:
         super().__init__(env)
         self.state_low = np.array(state_low) * np.ones(
-            self.env.unwrapped.observation_space.shape, dtype=self.env.unwrapped.observation_space.dtype
+            self.env.unwrapped.state_space.shape, dtype=self.env.unwrapped.state_space.dtype
         )
         self.state_high = np.array(state_high) * np.ones(
-            self.env.unwrapped.observation_space.shape, dtype=self.env.unwrapped.observation_space.dtype
+            self.env.unwrapped.state_space.shape, dtype=self.env.unwrapped.state_space.dtype
         )
         self.action_low = np.array(action_low, dtype=self.env.unwrapped.action_space.dtype)
         self.action_high = np.array(action_high, dtype=self.env.unwrapped.action_space.dtype)
         self.t_interval = t_interval if t_interval is not None else self.env.unwrapped.dt
 
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
-        truncated = self.get_truncated(t, x, u)
         s = self.get_state(x)
-        if truncated:
-            # reward = -0.5 * (s @ self.Q @ s + u @ self.R @ u) * (self.env.unwrapped.t_max - t)
-            reward = -1.0
-        else:
-            # reward = -0.5 * (s @ self.Q @ s + u @ self.R @ u) * self.env.unwrapped.dt
-            reward = 1.0
+        reward = np.exp(-0.5 * (s @ self.Q @ s + u @ self.R @ u))
         return reward
 
     def get_truncated(self, t: float, x: np.ndarray, u: np.ndarray) -> bool:

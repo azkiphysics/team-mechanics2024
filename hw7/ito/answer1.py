@@ -1,16 +1,28 @@
 import argparse
-import os
+import logging
+from logging import getLogger, Formatter, StreamHandler
 from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import numpy as np
-from tqdm import tqdm
+import yaml
+from tqdm import trange
+from tqdm.contrib.logging import logging_redirect_tqdm
 
-from common.agents import Agent, LQRAgent, DQNAgent, DDPGAgent
+from common.agents import Agent, DQNAgent, DDPGAgent, LQRAgent
 from common.buffers import Buffer
 from common.envs import Env, CartPoleEnv
-from common.utils import MovieMaker
-from common.wrappers import LQRMultiBodyEnvWrapper, DQNMultiBodyEnvWrapper, DDPGMultiBodyEnvWrapper
+from common.utils import FigureMaker, MovieMaker
+from common.wrappers import DQNMultiBodyEnvWrapper, DDPGMultiBodyEnvWrapper, LQRMultiBodyEnvWrapper
+
+# ロガーの設定
+logger = getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler_format = Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+handler = StreamHandler()
+handler.setLevel(logging.DEBUG)
+handler.setFormatter(handler_format)
+logger.addHandler(handler)
 
 # Matplotlibで綺麗な論文用のグラフを作る
 # https://qiita.com/MENDY/items/fe9b0c50383d8b2fd919
@@ -24,15 +36,6 @@ plt.rcParams["ytick.direction"] = "in"  # y axis in
 plt.rcParams["axes.linewidth"] = 1.0  # axis line width
 plt.rcParams["axes.grid"] = True  # make grid
 plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
-
-
-AGENTS = {"LQR": LQRAgent, "DQN": DQNAgent, "DDPG": DDPGAgent}
-ENVS = {"CartPole": CartPoleEnv}
-ENV_WRAPPERS = {
-    "LQRMultiBody": LQRMultiBodyEnvWrapper,
-    "DQNMultiBody": DQNMultiBodyEnvWrapper,
-    "DDPGMultiBody": DDPGMultiBodyEnvWrapper,
-}
 
 
 class Runner(object):
@@ -54,6 +57,7 @@ class Runner(object):
         self.buffer: Buffer = buffer_config["class"](**buffer_config["init"])
         self.run_result = Buffer()
         self.evaluate_result = Buffer()
+        self.figure_maker = FigureMaker()
         self.movie_maker = MovieMaker()
 
     def reset(self):
@@ -62,41 +66,44 @@ class Runner(object):
         self.buffer.reset(**self.buffer_config["reset"])
         self.run_result.reset()
         self.evaluate_result.reset()
+        self.figure_maker.reset()
+        self.movie_maker.reset()
 
     def run(self, total_timesteps: int, learning_starts: int = 1000, trainfreq: int | None = None) -> Dict[str, float]:
         k_episodes = 0
         total_rewards = 0.0
         obs, _ = self.env.reset(**self.env_config["reset"])
-        for k_timesteps in tqdm(range(total_timesteps)):
-            action = self.agent.act(obs)
-            next_obs, reward, terminated, truncated, _ = self.env.step(action)
-            done = terminated or truncated
-            self.buffer.push(
-                {
-                    "obs": obs.copy(),
-                    "next_obs": next_obs.copy(),
-                    "action": action.copy(),
-                    "reward": reward,
-                    "done": done,
-                }
-            )
-            total_rewards += reward
-            if (
-                k_timesteps >= learning_starts
-                and trainfreq is not None
-                and trainfreq > 0
-                and k_timesteps % trainfreq == 0
-            ):
-                self.agent.train(buffer=self.buffer)
-            if done:
-                print("total_rewards: ", total_rewards, self.env.unwrapped.t)
-                k_episodes += 1
-                total_rewards = 0.0
-                obs, _ = self.env.reset(**self.env_config["reset"])
-            obs = next_obs.copy()
-            self.run_result.push({"episode": k_episodes, "total_rewards": total_rewards})
+        with logging_redirect_tqdm(loggers=[logger]):
+            for k_timesteps in trange(total_timesteps, leave=False):
+                action = self.agent.act(obs)
+                next_obs, reward, terminated, truncated, _ = self.env.step(action)
+                done = terminated or truncated
+                self.buffer.push(
+                    {
+                        "obs": obs.copy(),
+                        "next_obs": next_obs.copy(),
+                        "action": action.copy(),
+                        "reward": reward,
+                        "done": done,
+                    }
+                )
+                total_rewards += reward
+                if (
+                    k_timesteps >= learning_starts
+                    and trainfreq is not None
+                    and trainfreq > 0
+                    and k_timesteps % trainfreq == 0
+                ):
+                    self.agent.train(buffer=self.buffer)
+                if done:
+                    logger.info(f"episode: {k_episodes}/ total_rewards: {total_rewards}")
+                    k_episodes += 1
+                    total_rewards = 0.0
+                    obs, _ = self.env.reset(**self.env_config["reset"])
+                obs = next_obs.copy()
+                self.run_result.push({"episode": k_episodes, "total_rewards": total_rewards})
 
-    def evaluate(self, savedir: str):
+    def evaluate(self, moviefreq: int = 100):
         # シミュレーションの実行
         obs, info = self.env.reset(**self.env_config["reset"])
         self.agent.reset(**self.agent_config["reset"], is_evaluate=True)
@@ -106,104 +113,121 @@ class Runner(object):
         self.movie_maker.reset()
         self.movie_maker.add(self.env.render())
         k_steps = 0
-        movie_freq = 100
         while not done:
             k_steps += 1
             action = self.agent.act(obs)
             next_obs, _, terminated, truncated, info = self.env.step(action)
-            done = terminated or truncated
             self.evaluate_result.push(info)
-            if k_steps % movie_freq == 0 or done:
+            done = terminated or truncated
+            if k_steps % moviefreq == 0 or done:
                 self.movie_maker.add(self.env.render())
             if done:
                 break
             obs = next_obs.copy()
 
-        # 結果データの保存
-        savefile = "evaluate_result.pickle"
-        self.evaluate_result.save(savedir, savefile)
+    def save(self, savedir: str):
+        if len(self.run_result) > 0:
+            # 学習結果の保存
+            training_data = self.run_result.get()
+            total_rewards_data = {
+                "x": {"label": "Episode", "value": np.array(training_data["episode"], dtype=np.float64)},
+                "y": {
+                    "label": "State $s$",
+                    "value": np.array(training_data["total_rewards"], dtype=np.float64),
+                },
+            }
+            self.figure_maker.reset()
+            self.figure_maker.make(total_rewards_data)
+            savefile = "total_rewards.png"
+            self.figure_maker.save(savedir, savefile)
 
-        # 動画の保存
-        savefile = "evaluate_result.mp4"
-        self.movie_maker.make(savedir, 10.0, savefile=savefile)
+        if len(self.evaluate_result) > 0:
+            evaluate_data = self.evaluate_result.get()
+            # 状態の保存
+            state_data = {
+                "x": {"label": "Time $t$ s", "value": np.array(evaluate_data["t"], dtype=np.float64)},
+                "y": {
+                    "label": "State $s$",
+                    "value": [
+                        {"label": "$" + f"s_{idx + 1}" + "$", "value": state_idx}
+                        for idx, state_idx in enumerate(np.array(evaluate_data["s"], dtype=np.float64).T)
+                    ],
+                },
+            }
+            savefile = "state.png"
+            self.figure_maker.reset()
+            self.figure_maker.make(state_data)
+            self.figure_maker.save(savedir, savefile=savefile)
 
-        # 図の保存
-        ts = np.array(self.evaluate_result.get()["t"], dtype=np.float64)
-        states = np.array(self.evaluate_result.get()["s"], dtype=np.float64)
-        us = np.array(self.evaluate_result.get()["u"], dtype=np.float64)
-        fig, ax = plt.subplots(figsize=(8, 6))
-        for idx in range(states.shape[1]):
-            ax.plot(ts, states[:, idx], label="$" + f"x_{idx + 1}" + "$")
-        ax.set_xlabel("Time $t$ s")
-        ax.set_ylabel("State $x$")
-        ax.legend(loc="lower right")
-        savefile = "evaluate_result_state.png"
-        savepath = os.path.join(savedir, savefile)
-        fig.savefig(savepath, dpi=300)
-        ax.cla()
-        for idx in range(us.shape[1]):
-            ax.plot(ts[:-1], us[:, idx], label="$" + f"u_{idx + 1}" + "$")
-        ax.legend(loc="lower right")
-        savefile = "evaluate_result_u.png"
-        savepath = os.path.join(savedir, savefile)
-        fig.savefig(savepath, dpi=300)
+            # 制御入力の保存
+            u_data = {
+                "x": {"label": "Time $t$ s", "value": np.array(evaluate_data["t"], dtype=np.float64)[:-1]},
+                "y": {
+                    "label": "Control input $u$",
+                    "value": [
+                        {"label": "$" + f"u_{idx + 1}" + "$", "value": u_idx}
+                        for idx, u_idx in enumerate(np.array(evaluate_data["u"], dtype=np.float64).T)
+                    ],
+                },
+            }
+            savefile = "u.png"
+            self.figure_maker.reset()
+            self.figure_maker.make(u_data)
+            self.figure_maker.save(savedir, savefile=savefile)
 
+            # 動画の保存
+            savefile = "animation.mp4"
+            self.movie_maker.make(savedir, evaluate_data["t"][-1], savefile=savefile)
+
+
+ENVS = {"CartPoleEnv": CartPoleEnv}
+AGENTS = {"DQN": DQNAgent, "DDPG": DDPGAgent, "LQR": LQRAgent}
+BUFFERS = {"Buffer": Buffer}
+RUNNERS = {"Runner": Runner}
+WRAPPERS = {
+    "DQNMultiBody": DQNMultiBodyEnvWrapper,
+    "DDPGMultiBody": DDPGMultiBodyEnvWrapper,
+    "LQRMultiBody": LQRMultiBodyEnvWrapper,
+}
 
 if __name__ == "__main__":
-    args = argparse.ArgumentParser("Cart pole")
-    parser = args.parse_args()
+    parser = argparse.ArgumentParser("Gymnasium training")
+    parser.add_argument("config_path", type=str)
+    args = parser.parse_args()
+
+    # configの読み込み
+    with open(args.config_path) as f:
+        config = yaml.safe_load(f)
 
     # 環境の設定
-    initial_x = np.array([0.0, 0.0, 1.0, np.pi / 2 + 0.3, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
-    target_x = initial_x.copy()
-    target_x[0] = 1.0
-    target_x[3] = np.pi / 2.0
-    Q = 0.01 * np.diag([1, 1, 0.0, 0.0])
-    R = 0.0
-    env_name = "CartPole"
-    agent_name = "DDPG"
-    env_wrapper_name = agent_name + "MultiBody"
-    if env_wrapper_name == "LQRMultiBody":
-        env_wrapper_config = {"class": ENV_WRAPPERS[env_wrapper_name], "init": {}}
-        agent_reset_config = {"Q": Q, "R": R}
-    else:
-        env_wrapper_config = {
-            "class": ENV_WRAPPERS[env_wrapper_name],
-            "init": {
-                "state_low": [-3.5, -0.8, -10.0, -10.0],
-                "state_high": [3.5, 0.8, 10.0, 10.0],
-                "action_low": -20.0,
-                "action_high": 20.0,
-                # "n_action_splits": 2,
-                "t_interval": 0.02,
-            },
-        }
-        agent_reset_config = {}
-    env_init_config = {"t_max": 15.0, "dt": 1e-3, "m_cart": 1.0, "m_ball": 1.0, "l_pole": 1.0}
-    env_reset_config = {
-        "initial_t": 0.0,
-        "initial_x": initial_x,
-        "integral_method": "runge_kutta_method",
-        "target_x": target_x,
-        "Q": Q,
-        "R": R,
-    }
     env_config = {
-        "class": ENVS[env_name],
-        "wrappers": [env_wrapper_config],
-        "init": env_init_config,
-        "reset": env_reset_config,
+        "class": ENVS[config["env"]["name"]],
+        "wrappers": [
+            {"class": WRAPPERS[wrapper["name"]], "init": wrapper["init"]} for wrapper in config["env"]["wrappers"]
+        ],
+        "init": config["env"]["init"],
+        "reset": config["env"]["reset"],
     }
 
     # エージェントの設定
-    agent_config = {"class": AGENTS[agent_name], "init": {}, "reset": agent_reset_config}
+    agent_config = {
+        "class": AGENTS[config["agent"]["name"]],
+        "init": config["agent"]["init"],
+        "reset": config["agent"]["reset"],
+    }
 
     # バッファの設定
-    buffer_config = {"class": Buffer, "init": {"maxlen": None}, "reset": {}}
+    buffer_config = {
+        "class": BUFFERS[config["buffer"]["name"]],
+        "init": config["buffer"]["init"],
+        "reset": config["buffer"]["reset"],
+    }
 
     # Runnerの設定
-    runner = Runner(env_config, agent_config, buffer_config)
-    runner.reset()
-    # runner.run(2)
-    runner.run(100000, learning_starts=1000, trainfreq=1)
-    runner.evaluate("result")
+    runner: Runner = RUNNERS[config["runner"]["name"]](
+        env_config, agent_config, buffer_config, **config["runner"]["init"]
+    )
+    runner.reset(**config["runner"]["reset"])
+    runner.run(**config["runner"]["run"])
+    runner.evaluate(**config["runner"]["evaluate"])
+    runner.save(**config["runner"]["save"])

@@ -1,0 +1,80 @@
+env:
+  name: CartPoleEnv
+  init:
+    t_max: 15.0
+    dt: 0.02
+    m_cart: 1.0
+    m_ball: 1.0
+    l_pole: 1.0
+  reset:
+    initial_t: 0.0
+    initial_x:
+      - 0.0
+      - 0.0
+      - 1.0
+      - 1.8707963267948966
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+    target_x:
+      - 1.0
+      - 0.0
+      - 1.0
+      - 1.5707963267948966
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+    Q:
+      - 1.0
+      - 10.0
+      - 1.0
+      - 1.0
+    R:
+      - 0.001
+  wrappers:
+    - name: DDPGMultiBody
+      init:
+        state_low:
+          - -3.5
+          - -0.5
+          - -10.0
+          - -10.0
+        state_high:
+          - 3.5
+          - 0.5
+          - 10.0
+          - 10.0
+        action_low:
+          - -15.0
+        action_high:
+          - 15.0
+        t_interval:
+agent:
+  name: DDPG
+  init:
+    actor_learning_rate: 1.0e-4
+    critic_learning_rate: 1.0e-3
+    gamma: 0.99
+    batch_size: 256
+    tau: 0.005
+    action_noise: 0.1
+  reset: {}
+buffer:
+  name: Buffer
+  init:
+    maxlen:
+  reset: {}
+runner:
+  name: Runner
+  init: {}
+  reset: {}
+  run:
+    total_timesteps: 40000
+    learning_starts: 2000
+    trainfreq: 1
+  evaluate:
+    moviefreq: 1
+  save:
+    savedir: results/CartPoleEnv/DDPG
