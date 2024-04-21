@@ -157,7 +157,7 @@ class DQNAgent(DRLAgent):
         batch_size: int = 64,
         eps_update_freq: int = 10,
         tau: float = 1.0,
-        target_update_interval: int = 10000,
+        target_update_interval: int = 1000,
         max_grad_norm: float = 10.0,
         device: torch.device | str = "auto",
     ) -> None:

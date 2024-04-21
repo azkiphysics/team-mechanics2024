@@ -1,15 +1,24 @@
-import argparse
+import logging
+from logging import getLogger, Formatter, StreamHandler
 from typing import Dict, List
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
-from tqdm import tqdm
+from tqdm import trange
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 from common.agents import Agent, DQNAgent, DDPGAgent
 from common.buffers import Buffer
-from common.envs import Env, CartPoleEnv
 from common.utils import MovieMaker
-from common.wrappers import DQNMultiBodyEnvWrapper, DDPGMultiBodyEnvWrapper
+
+# ロガーの設定
+logger = getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler_format = Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+handler = StreamHandler()
+handler.setLevel(logging.DEBUG)
+handler.setFormatter(handler_format)
+logger.addHandler(handler)
 
 # Matplotlibで綺麗な論文用のグラフを作る
 # https://qiita.com/MENDY/items/fe9b0c50383d8b2fd919
@@ -24,19 +33,13 @@ plt.rcParams["axes.linewidth"] = 1.0  # axis line width
 plt.rcParams["axes.grid"] = True  # make grid
 plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
 
-
 AGENTS = {"DQN": DQNAgent, "DDPG": DDPGAgent}
-ENVS = {"CartPole": CartPoleEnv}
-ENV_WRAPPERS = {
-    "DQNMultiBody": DQNMultiBodyEnvWrapper,
-    "DDPGMultiBody": DDPGMultiBodyEnvWrapper,
-}
 
 
 class Runner(object):
     def __init__(
         self,
-        env_config: Dict[str, Env | Dict[str, int | float] | List[Dict[str, int | float]]],
+        env_config: Dict[str, gym.Env | Dict[str, int | float] | List[Dict[str, int | float]]],
         agent_config: Dict[str, Agent | Dict[str, int | float]],
         buffer_config: Dict[str, Buffer | Dict[str, int]],
     ) -> None:
@@ -44,14 +47,13 @@ class Runner(object):
         self.agent_config = agent_config
         self.buffer_config = buffer_config
 
-        self.env: Env = env_config["class"](**env_config["init"])
+        self.env: gym.Env = env_config["class"](**env_config["init"])
         if "wrappers" in env_config:
             for env_wrapper_config in self.env_config["wrappers"]:
                 self.env = env_wrapper_config["class"](self.env, **env_wrapper_config["init"])
         self.agent: Agent = agent_config["class"](self.env, **agent_config["init"])
         self.buffer: Buffer = buffer_config["class"](**buffer_config["init"])
         self.run_result = Buffer()
-        self.evaluate_result = Buffer()
         self.movie_maker = MovieMaker()
 
     def reset(self):
@@ -59,58 +61,83 @@ class Runner(object):
         self.agent.reset(**self.agent_config["reset"])
         self.buffer.reset(**self.buffer_config["reset"])
         self.run_result.reset()
-        self.evaluate_result.reset()
+        self.movie_maker.reset()
 
     def run(self, total_timesteps: int, learning_starts: int = 1000, trainfreq: int | None = None) -> Dict[str, float]:
         k_episodes = 0
         total_rewards = 0.0
         obs, _ = self.env.reset(**self.env_config["reset"])
-        for k_timesteps in tqdm(range(total_timesteps)):
+        with logging_redirect_tqdm(loggers=[logger]):
+            for k_timesteps in trange(total_timesteps, leave=False):
+                action = self.agent.act(obs)
+                next_obs, reward, terminated, truncated, _ = self.env.step(action)
+                done = terminated or truncated
+                self.buffer.push(
+                    {
+                        "obs": obs.copy(),
+                        "next_obs": next_obs.copy(),
+                        "action": action.copy(),
+                        "reward": reward,
+                        "done": done,
+                    }
+                )
+                total_rewards += reward
+                if (
+                    k_timesteps >= learning_starts
+                    and trainfreq is not None
+                    and trainfreq > 0
+                    and k_timesteps % trainfreq == 0
+                ):
+                    self.agent.train(buffer=self.buffer)
+                if done:
+                    logger.info(f"episode: {k_episodes}/ total_rewards: {total_rewards}")
+                    k_episodes += 1
+                    total_rewards = 0.0
+                    obs, _ = self.env.reset(**self.env_config["reset"])
+                obs = next_obs.copy()
+                self.run_result.push({"episode": k_episodes, "total_rewards": total_rewards})
+
+    def evaluate(self, savedir: str, movie_freq: int = 100):
+        # シミュレーションの実行
+        obs, _ = self.env.reset(**self.env_config["reset"])
+        self.agent.reset(**self.agent_config["reset"], is_evaluate=True)
+        done = False
+        self.movie_maker.reset()
+        self.movie_maker.add(self.env.render())
+        k_steps = 0
+        while not done:
+            k_steps += 1
             action = self.agent.act(obs)
-            next_obs, reward, terminated, truncated, _ = self.env.step(action)
+            next_obs, _, terminated, truncated, _ = self.env.step(action)
             done = terminated or truncated
-            self.buffer.push(
-                {
-                    "obs": obs.copy(),
-                    "next_obs": next_obs.copy(),
-                    "action": action.copy(),
-                    "reward": reward,
-                    "done": done,
-                }
-            )
-            total_rewards += reward
-            if (
-                k_timesteps >= learning_starts
-                and trainfreq is not None
-                and trainfreq > 0
-                and k_timesteps % trainfreq == 0
-            ):
-                self.agent.train(buffer=self.buffer)
+            if k_steps % movie_freq == 0 or done:
+                self.movie_maker.add(self.env.render())
             if done:
-                print("total_rewards: ", total_rewards)
-                k_episodes = 0
-                total_rewards = 0.0
-                obs, _ = self.env.reset(**self.env_config["reset"])
+                break
             obs = next_obs.copy()
-            self.run_result.push({"episode": k_episodes, "total_rewards": total_rewards})
+
+        # 動画の保存
+        savefile = "evaluate_result.mp4"
+        self.movie_maker.make(savedir, 10.0, savefile=savefile)
 
 
 if __name__ == "__main__":
-    args = argparse.ArgumentParser("gym env training")
-    parser = args.parse_args()
-
     # 環境の設定
-    env_name = "Pendulum-v1"
-    agent_name = "DDPG"
+    env_name = "CartPole-v1"
+    agent_name = "DQN"
     env_config = {
         "class": gym.make,
         "wrappers": [],
-        "init": {"id": env_name},
+        "init": {"id": env_name, "render_mode": "rgb_array"},
         "reset": {},
     }
 
     # エージェントの設定
-    agent_config = {"class": AGENTS[agent_name], "init": {}, "reset": {}}
+    agent_config = {
+        "class": AGENTS[agent_name],
+        "init": {"target_update_interval": 100, "learning_rate": 5e-4, "gamma": 0.99, "decay": 0.01},
+        "reset": {},
+    }
 
     # バッファの設定
     buffer_config = {"class": Buffer, "init": {"maxlen": None}, "reset": {}}
@@ -118,5 +145,5 @@ if __name__ == "__main__":
     # Runnerの設定
     runner = Runner(env_config, agent_config, buffer_config)
     runner.reset()
-    # runner.run(2)
-    runner.run(200000, learning_starts=10000, trainfreq=1)
+    runner.run(200000, learning_starts=0, trainfreq=1)
+    runner.evaluate(f"result/{env_name}", movie_freq=1)

@@ -63,7 +63,7 @@ class Runner(object):
         self.run_result.reset()
         self.evaluate_result.reset()
 
-    def run(self, total_timesteps: int, trainfreq: int | None = None) -> Dict[str, float]:
+    def run(self, total_timesteps: int, learning_starts: int = 1000, trainfreq: int | None = None) -> Dict[str, float]:
         k_episodes = 0
         total_rewards = 0.0
         obs, _ = self.env.reset(**self.env_config["reset"])
@@ -81,11 +81,16 @@ class Runner(object):
                 }
             )
             total_rewards += reward
-            if trainfreq is not None and trainfreq > 0 and k_timesteps % trainfreq == 0:
+            if (
+                k_timesteps >= learning_starts
+                and trainfreq is not None
+                and trainfreq > 0
+                and k_timesteps % trainfreq == 0
+            ):
                 self.agent.train(buffer=self.buffer)
             if done:
                 print("total_rewards: ", total_rewards, self.env.unwrapped.t)
-                k_episodes = 0
+                k_episodes += 1
                 total_rewards = 0.0
                 obs, _ = self.env.reset(**self.env_config["reset"])
             obs = next_obs.copy()
@@ -153,17 +158,14 @@ if __name__ == "__main__":
     target_x = initial_x.copy()
     target_x[0] = 1.0
     target_x[3] = np.pi / 2.0
-    Q = 1.0
-    R = 1.0
+    Q = 0.01 * np.diag([1, 1, 0.0, 0.0])
+    R = 0.0
     env_name = "CartPole"
-    agent_name = "LQR"
+    agent_name = "DDPG"
     env_wrapper_name = agent_name + "MultiBody"
     if env_wrapper_name == "LQRMultiBody":
         env_wrapper_config = {"class": ENV_WRAPPERS[env_wrapper_name], "init": {}}
-        agent_reset_config = {
-            "Q": Q,
-            "R": R,
-        }
+        agent_reset_config = {"Q": Q, "R": R}
     else:
         env_wrapper_config = {
             "class": ENV_WRAPPERS[env_wrapper_name],
@@ -172,8 +174,8 @@ if __name__ == "__main__":
                 "state_high": [3.5, 0.8, 10.0, 10.0],
                 "action_low": -20.0,
                 "action_high": 20.0,
-                "n_action_splits": 2,
-                "t_interval": None,
+                # "n_action_splits": 2,
+                "t_interval": 0.02,
             },
         }
         agent_reset_config = {}
@@ -203,5 +205,5 @@ if __name__ == "__main__":
     runner = Runner(env_config, agent_config, buffer_config)
     runner.reset()
     # runner.run(2)
-    runner.run(100000, trainfreq=1)
+    runner.run(100000, learning_starts=1000, trainfreq=1)
     runner.evaluate("result")
