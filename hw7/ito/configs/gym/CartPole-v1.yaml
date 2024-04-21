@@ -8,12 +8,12 @@ env:
 agent:
   name: DQN
   init:
-    target_update_interval: 1000
-    learning_rate: 1.0e-3
+    target_update_interval: 500
+    learning_rate: 1.0e-4
     gamma: 0.99
-    decay: 0.01
-    scheduler_last_ratio: 0.0,
-    scheduler_iters: 200000
+    decay: 0.001
+    scheduler_last_ratio: 0.0
+    scheduler_iters: 100000
   reset: {}
 buffer:
   name: Buffer
@@ -25,9 +25,10 @@ runner:
   init: {}
   reset: {}
   run:
-    total_timesteps: 200000
+    total_timesteps: 100000
     learning_starts: 0
     trainfreq: 1
   evaluate:
-    savedir: results/CartPole-v1/DQN
     moviefreq: 1
+  save:
+    savedir: results/gym/CartPole-v1/DQN

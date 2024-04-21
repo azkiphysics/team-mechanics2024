@@ -5,13 +5,14 @@ from typing import Dict, List
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
+import numpy as np
 import yaml
 from tqdm import trange
 from tqdm.contrib.logging import logging_redirect_tqdm
 
 from common.agents import Agent, DQNAgent, DDPGAgent
 from common.buffers import Buffer
-from common.utils import MovieMaker
+from common.utils import FigureMaker, MovieMaker
 
 # ロガーの設定
 logger = getLogger(__name__)
@@ -54,6 +55,8 @@ class Runner(object):
         self.agent: Agent = agent_config["class"](self.env, **agent_config["init"])
         self.buffer: Buffer = buffer_config["class"](**buffer_config["init"])
         self.run_result = Buffer()
+        self.evaluate_result = Buffer()
+        self.figure_maker = FigureMaker()
         self.movie_maker = MovieMaker()
 
     def reset(self):
@@ -61,6 +64,8 @@ class Runner(object):
         self.agent.reset(**self.agent_config["reset"])
         self.buffer.reset(**self.buffer_config["reset"])
         self.run_result.reset()
+        self.evaluate_result.reset()
+        self.figure_maker.reset()
         self.movie_maker.reset()
 
     def run(self, total_timesteps: int, learning_starts: int = 1000, trainfreq: int | None = None) -> Dict[str, float]:
@@ -97,33 +102,89 @@ class Runner(object):
                 obs = next_obs.copy()
                 self.run_result.push({"episode": k_episodes, "total_rewards": total_rewards})
 
-    def evaluate(self, savedir: str, movie_freq: int = 100):
+    def evaluate(self, moviefreq: int = 100):
         # シミュレーションの実行
         obs, _ = self.env.reset(**self.env_config["reset"])
         self.agent.reset(**self.agent_config["reset"], is_evaluate=True)
         done = False
+        k_steps = 0
+        self.evaluate_result.reset()
+        self.evaluate_result.push({"step": k_steps, "obs": obs.copy()})
         self.movie_maker.reset()
         self.movie_maker.add(self.env.render())
-        k_steps = 0
         while not done:
             k_steps += 1
             action = self.agent.act(obs)
             next_obs, _, terminated, truncated, _ = self.env.step(action)
+            self.evaluate_result.push({"step": k_steps, "obs": next_obs.copy(), "action": action.copy()})
             done = terminated or truncated
-            if k_steps % movie_freq == 0 or done:
+            if k_steps % moviefreq == 0 or done:
                 self.movie_maker.add(self.env.render())
             if done:
                 break
             obs = next_obs.copy()
 
-        # 動画の保存
-        savefile = "evaluate_result.mp4"
-        self.movie_maker.make(savedir, 10.0, savefile=savefile)
+    def save(self, savedir: str):
+        if len(self.run_result) > 0:
+            # 学習結果の保存
+            training_data = self.run_result.get()
+            total_rewards_data = {
+                "x": {"label": "Episode", "value": np.array(training_data["episode"], dtype=np.float64)},
+                "y": {
+                    "label": "State $s$",
+                    "value": np.array(training_data["total_rewards"], dtype=np.float64),
+                },
+            }
+            self.figure_maker.reset()
+            self.figure_maker.make(total_rewards_data)
+            savefile = "total_rewards.png"
+            self.figure_maker.save(savedir, savefile)
+
+        if len(self.evaluate_result) > 0:
+            evaluate_data = self.evaluate_result.get()
+            # 状態の保存
+            obs_data = {
+                "x": {"label": "Step", "value": np.array(evaluate_data["step"], dtype=np.float64)},
+                "y": {
+                    "label": "Observation $o$",
+                    "value": [
+                        {"label": "$" + f"o_{idx + 1}" + "$", "value": state_idx}
+                        for idx, state_idx in enumerate(np.array(evaluate_data["obs"], dtype=np.float64).T)
+                    ],
+                },
+            }
+            savefile = "observation.png"
+            self.figure_maker.reset()
+            self.figure_maker.make(obs_data)
+            self.figure_maker.save(savedir, savefile=savefile)
+
+            # 制御入力の保存
+            action = np.array(evaluate_data["action"], dtype=np.float64)
+            if isinstance(self.env.action_space, gym.spaces.Discrete):
+                action = action.reshape(-1, 1)
+            action_data = {
+                "x": {"label": "Step", "value": np.array(evaluate_data["step"], dtype=np.float64)[:-1]},
+                "y": {
+                    "label": "Action $a$",
+                    "value": [
+                        {"label": "$" + f"a_{idx + 1}" + "$", "value": u_idx} for idx, u_idx in enumerate(action.T)
+                    ],
+                },
+            }
+            savefile = "action.png"
+            self.figure_maker.reset()
+            self.figure_maker.make(action_data)
+            self.figure_maker.save(savedir, savefile=savefile)
+
+            # 動画の保存
+            savefile = "animation.mp4"
+            self.movie_maker.make(savedir, 10.0, savefile=savefile)
 
 
 AGENTS = {"DQN": DQNAgent, "DDPG": DDPGAgent}
 BUFFERS = {"Buffer": Buffer}
 RUNNERS = {"Runner": Runner}
+WRAPPERS = {}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Gymnasium training")
@@ -137,7 +198,9 @@ if __name__ == "__main__":
     # 環境の設定
     env_config = {
         "class": gym.make,
-        "wrappers": config["env"]["wrappers"],
+        "wrappers": [
+            {"class": WRAPPERS[wrapper["name"]], "init": wrapper["init"]} for wrapper in config["env"]["wrappers"]
+        ],
         "init": config["env"]["init"],
         "reset": config["env"]["reset"],
     }
@@ -163,3 +226,4 @@ if __name__ == "__main__":
     runner.reset(**config["runner"]["reset"])
     runner.run(**config["runner"]["run"])
     runner.evaluate(**config["runner"]["evaluate"])
+    runner.save(**config["runner"]["save"])

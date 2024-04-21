@@ -103,12 +103,16 @@ class Env(object):
         raise NotImplementedError()
 
     def reset(
-        self, initial_t: float, initial_x: np.ndarray, integral_method: str = "runge_kutta_method", **kwargs
+        self,
+        initial_t: float,
+        initial_x: List[float] | np.ndarray,
+        integral_method: str = "runge_kutta_method",
+        **kwargs,
     ) -> Tuple[np.ndarray, Dict[str, bool | float | np.ndarray]]:
         """シミュレーションの初期化"""
         self.integral_method = integral_method
         self.initial_t = initial_t
-        self.initial_x = initial_x.copy()
+        self.initial_x = np.array(initial_x, dtype=np.float64)
         self.t = initial_t
         self.x = initial_x.copy()
         s = self.get_state(self.x)
@@ -241,7 +245,11 @@ class MultiBodyEnv(Env):
         return x
 
     def reset(
-        self, initial_t: float, initial_x: np.ndarray, integral_method: str = "runge_kutta_method", **kwargs
+        self,
+        initial_t: float,
+        initial_x: List[float] | np.ndarray,
+        integral_method: str = "runge_kutta_method",
+        **kwargs,
     ) -> Tuple[np.ndarray, Dict[str, bool | float | np.ndarray]]:
         """シミュレーションの初期化"""
         _, info = super().reset(initial_t, initial_x, integral_method=integral_method)

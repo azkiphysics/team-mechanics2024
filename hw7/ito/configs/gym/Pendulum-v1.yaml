@@ -19,9 +19,10 @@ runner:
   init: {}
   reset: {}
   run:
-    total_timesteps: 50000
+    total_timesteps: 40000
     learning_starts: 10000
     trainfreq: 1
   evaluate:
-    savedir: results/Pendulum-v1/DDPG
     moviefreq: 1
+  save:
+    savedir: results/gym/Pendulum-v1/DDPG

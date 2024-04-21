@@ -54,11 +54,14 @@ class FigureMaker(object):
         y_label = y.get("label", "")
         y_value = y.get("value")
 
-        for y_value_idx in y_value:
-            self.ax.plot(x_value, y_value_idx.get("value"), label=y_value_idx.get("label", ""))
+        if isinstance(y_value, list):
+            for y_value_idx in y_value:
+                self.ax.plot(x_value, y_value_idx.get("value"), label=y_value_idx.get("label", ""))
+            self.ax.legend(loc="upper right")
+        else:
+            self.ax.plot(x_value, y_value)
         self.ax.set_xlabel(x_label)
         self.ax.set_ylabel(y_label)
-        self.ax.legend(loc="upper right")
 
     def save(self, savedir: str, savefile: str = "trajectory.png"):
         """図の保存"""
