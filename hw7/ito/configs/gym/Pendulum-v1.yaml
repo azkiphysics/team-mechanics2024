@@ -1,5 +1,5 @@
 env:
-  name: Pendulum-v1
+  name: gym
   init:
     id: Pendulum-v1
     render_mode: rgb_array
@@ -19,7 +19,7 @@ runner:
   init: {}
   reset: {}
   run:
-    total_timesteps: 200000
+    total_timesteps: 50000
     learning_starts: 10000
     trainfreq: 1
   evaluate:

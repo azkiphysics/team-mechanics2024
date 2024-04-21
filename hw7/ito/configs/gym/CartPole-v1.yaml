@@ -1,5 +1,5 @@
 env:
-  name: CartPole-v1
+  name: gym
   init:
     id: CartPole-v1
     render_mode: rgb_array
