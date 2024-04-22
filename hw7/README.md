@@ -29,13 +29,13 @@ conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvi
 
 ### 解説
 #### 倒立振子の運動方程式の線形化
-LQR制御では，線形な運動方程式を利用します．そこで，倒立振子環境を平衡点まわりで線形化することを考えます．いま，倒立振子の独立変数を $\boldsymbol{x}$ とし，平衡点を $\boldsymbol{x}_e$ , $\boldsymbol{u}_e$ とします． 独立変数 $\boldsymbol{x}$ に対する運動方程式を $\dot{\boldsymbol{x}} = \boldsymbol{f}(\boldsymbol{x})$ としたとき， $\boldsymbol{x} = \boldsymbol{x}_e$ , $\boldsymbol{u}=\boldsymbol{u}_e$ まわりでテイラー展開すると次式のように表されます．
+LQR制御では，線形な運動方程式を利用します．そこで，倒立振子環境を平衡点まわりで線形化することを考えます．いま，倒立振子の独立変数を $\boldsymbol{x}$ とし，平衡点を $\boldsymbol{x}\_e$ , $\boldsymbol{u}\_e$ とします． 独立変数 $\boldsymbol{x}$ に対する運動方程式を $\dot{\boldsymbol{x}} = \boldsymbol{f}(\boldsymbol{x})$ としたとき， $\boldsymbol{x} = \boldsymbol{x}\_e$ , $\boldsymbol{u}=\boldsymbol{u}\_e$ まわりでテイラー展開すると次式のように表されます．
 
 $$
-\frac{d}{dt}(\boldsymbol{x} - \boldsymbol{x}_e) = \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{x}}\Bigg|_{(\boldsymbol{x}_e, \boldsymbol{u}_e)}(\boldsymbol{x} - \boldsymbol{x}_e) + \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{u}}\Bigg|_{(\boldsymbol{x}_e, \boldsymbol{u}_e)}(\boldsymbol{u} - \boldsymbol{u}_e)
+\frac{d}{dt}(\boldsymbol{x} - \boldsymbol{x}\_e) = \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{x}}\Bigg |\_{(\boldsymbol{x}\_e, \boldsymbol{u}\_e)}(\boldsymbol{x} - \boldsymbol{x}\_e) + \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{u}}\Bigg|\_{(\boldsymbol{x}\_e, \boldsymbol{u}\_e)}(\boldsymbol{u} - \boldsymbol{u}\_e)
 $$
 
-$\bar{\boldsymbol{x}} = \boldsymbol{x} - \boldsymbol{x}_e$ , $\mathrm{A} = \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{x}}\big|_{(\boldsymbol{x}_e, \boldsymbol{u}_e)}$ , $\mathrm{B} = \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{u}}\big|_{(\boldsymbol{x}_e, \boldsymbol{u}_e)}$ とすると，以下のように線形方程式を書き換えることができます．
+$\bar{\boldsymbol{x}} = \boldsymbol{x} - \boldsymbol{x}\_e$ , $\bar{\boldsymbol{u}} = \boldsymbol{u} - \boldsymbol{u}\_e$ , $\mathrm{A} = \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{x}}\big|\_{(\boldsymbol{x}\_e, \boldsymbol{u}\_e)}$ , $\mathrm{B} = \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{u}}\big|\_{(\boldsymbol{x}\_e, \boldsymbol{u}\_e)}$ とすると，以下のような線形方程式に書き換えることができます．
 
 $$
 \dot{\bar{\boldsymbol{x}}} = \mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}}
@@ -53,20 +53,19 @@ $$
 ここでは，線型方程式 $\dot{\bar{\boldsymbol{x}}} = \mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}}$ を制約条件として, 目的関数 $J$ を最小化するので，実際には以下の目的関数 $J_{\mathrm{aug}}$ を最小化します．ここで，変数 $\boldsymbol{\lambda}$ はラグランジュの未定乗数を表しており，下式の右辺第1項の被積分関数に $\boldsymbol{\lambda}^T(\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}} - \dot{\bar{\boldsymbol{x}}})$ を加えることで，運動制約を考慮した最適化が可能となります．
 
 $$
-J_{\mathrm{aug}} = \int_{t=0}^{t_{\mathrm{max}}}\Bigg\{\frac{1}{2}\Big(\bar{\boldsymbol{x}}^T\mathrm{Q}\bar{\boldsymbol{x}} + \bar{\boldsymbol{u}}^T\mathrm{R}\bar{\boldsymbol{u}}\Big) + \boldsymbol{\lambda}^T(\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}} - \dot{\bar{\boldsymbol{x}}})\Bigg\}dt + \frac{1}{2}\bar{\boldsymbol{x}}(t_f)^T\mathrm{Q}_f\bar{\boldsymbol{x}}(t_f)
+J_{\mathrm{aug}} = \int_{t=0}^{t_{\mathrm{max}}}\Bigg\\{\frac{1}{2}\Big(\bar{\boldsymbol{x}}^T\mathrm{Q}\bar{\boldsymbol{x}} + \bar{\boldsymbol{u}}^T\mathrm{R}\bar{\boldsymbol{u}}\Big) + \boldsymbol{\lambda}^T(\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}} - \dot{\bar{\boldsymbol{x}}})\Bigg\\}dt + \frac{1}{2}\bar{\boldsymbol{x}}(t_f)^T\mathrm{Q}_f\bar{\boldsymbol{x}}(t_f)
 $$
 
 目的関数 $J_{\mathrm{aug}}$ を最小にするための必要条件は，変分 $\delta J_{\mathrm{aug}}$ がゼロになることです．そこで，変分 $\delta J_{\mathrm{aug}}$ を計算すると
 
 $$
 \begin{eqnarray}
-    \delta J_{\mathrm{aug}} &=& \int_{t=0}^{t_{\mathrm{max}}}\Bigg\{\Big(\bar{\boldsymbol{x}}^T\mathrm{Q}\delta\bar{\boldsymbol{x}} + \bar{\boldsymbol{u}}^T\mathrm{R}\delta\bar{\boldsymbol{u}}\Big) + \delta\boldsymbol{\lambda}^T(\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}} - \dot{\bar{\boldsymbol{x}}}) + \boldsymbol{\lambda}^T(\mathrm{A}\delta\bar{\boldsymbol{x}} + \mathrm{B}\delta\bar{\boldsymbol{u}} - \delta\dot{\bar{\boldsymbol{x}}})\Bigg\}dt + \bar{\boldsymbol{x}}(t_f)^T\mathrm{Q}_f\delta\bar{\boldsymbol{x}}(t_f)
-
-    &=& \int_{t=0}^{t_{\mathrm{max}}}\Big\{(\bar{\boldsymbol{x}}^T\mathrm{Q} + \boldsymbol{\lambda}^T\mathrm{A} + \dot{\boldsymbol{\lambda}}^T)\delta\bar{\boldsymbol{x}} + (\bar{\boldsymbol{u}}^T\mathrm{R} + \boldsymbol{\lambda}^T\mathrm{B})\delta\bar{\boldsymbol{u}} + (\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}})^T\delta\boldsymbol{\lambda}\Big\}dt + \Big\{\bar{\boldsymbol{x}}(t_f)^T\mathrm{Q}_f - \boldsymbol{\lambda}^T(t_f)\Big\}\delta\bar{\boldsymbol{x}}(t_f)
+    \delta J_{\mathrm{aug}} &=& \int_{t=0}^{t_{\mathrm{max}}}\Bigg\\{\Big(\bar{\boldsymbol{x}}^T\mathrm{Q}\delta\bar{\boldsymbol{x}} + \bar{\boldsymbol{u}}^T\mathrm{R}\delta\bar{\boldsymbol{u}}\Big) + \delta\boldsymbol{\lambda}^T(\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}} - \dot{\bar{\boldsymbol{x}}}) + \boldsymbol{\lambda}^T(\mathrm{A}\delta\bar{\boldsymbol{x}} + \mathrm{B}\delta\bar{\boldsymbol{u}} - \delta\dot{\bar{\boldsymbol{x}}})\Bigg\\}dt + \bar{\boldsymbol{x}}(t_f)^T\mathrm{Q}\_f\delta\bar{\boldsymbol{x}}(t_f)\\
+    &=& \int_{t=0}^{t_{\mathrm{max}}}\Big\\{(\bar{\boldsymbol{x}}^T\mathrm{Q} + \boldsymbol{\lambda}^T\mathrm{A} + \dot{\boldsymbol{\lambda}}^T)\delta\bar{\boldsymbol{x}} + (\bar{\boldsymbol{u}}^T\mathrm{R} + \boldsymbol{\lambda}^T\mathrm{B})\delta\bar{\boldsymbol{u}} + (\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}}  - \dot{\bar{\boldsymbol{x}}})^T\delta\boldsymbol{\lambda}\Big\\}dt + \Big\\{\bar{\boldsymbol{x}}(t_f)^T\mathrm{Q}_f - \boldsymbol{\lambda}^T(t_f)\Big\\}\delta\bar{\boldsymbol{x}}(t_f)
 \end{eqnarray}
 $$
 
-となるので，$\delta J_{\mathrm{aug}} = 0$ となるための条件は，
+となるので, $\delta J_{\mathrm{aug}} = 0$ となるための条件は以下のようになります．
 
 $$
 \begin{cases}
@@ -76,3 +75,36 @@ $$
     \bar{\boldsymbol{x}}(t_f)^T\mathrm{Q}_f - \boldsymbol{\lambda}^T(t_f) = \boldsymbol{0}
 \end{cases}
 $$
+
+これより，上式は初期条件 $\boldsymbol{x}(t_0) = \boldsymbol{x}_0$ , 終端条件 $\boldsymbol{\lambda}(t_f) = \mathrm{Q}_f\bar{\boldsymbol{x}}(t_f)$ の2点境界値問題として数値的に解くことができます．
+
+また，終端条件を参考にして $\boldsymbol{\lambda} = \mathrm{P}\bar{\boldsymbol{x}}$ と仮定します．このとき，これと3つ目の式を1つ目の式に代入すると，以下のように書き直すことができます．
+
+$$
+\dot{\mathrm{P}}\bar{\boldsymbol{x}} + \mathrm{P}(\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}}) + \mathrm{Q}\bar{\boldsymbol{x}} + \mathrm{A}^T\mathrm{P}\bar{\boldsymbol{x}} = \boldsymbol{0}
+$$
+
+さらに，第2式を $\bar{\boldsymbol{u}}$ について解くと, $\bar{\boldsymbol{u}} = \mathrm{R}^{-1}\mathrm{B}^T\mathrm{P}\bar{\boldsymbol{x}}$ となるので，これを上式に代入すると，以下の方程式が得られます．
+
+$$
+\dot{\mathrm{P}}\bar{\boldsymbol{x}} + \mathrm{P}\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{A}^T\mathrm{P}\bar{\boldsymbol{x}} + \mathrm{P}\mathrm{B}\mathrm{R}^{-1}\mathrm{B}^T\mathrm{P}\bar{\boldsymbol{x}} + \mathrm{Q}\bar{\boldsymbol{x}} = \boldsymbol{0}
+$$
+
+この式は任意の $\bar{\boldsymbol{x}}$ について成り立つので， $\bar{\boldsymbol{x}}$ を除いた以下の行列方程式の形で表されます．
+
+$$
+\dot{\mathrm{P}} + \mathrm{P}\mathrm{A} + \mathrm{A}^T\mathrm{P} + \mathrm{P}\mathrm{B}\mathrm{R}^{-1}\mathrm{B}^T\mathrm{P} + \mathrm{Q} = \boldsymbol{0}
+$$
+
+この方程式はRicacci方程式と呼ばれており，終端条件を $P = S_f$ として時間前方積分をしてあげることで，各時刻の $\mathrm{P}$ が計算でき，制御入力 $\bar{\boldsymbol{u}}$ を計算することができます．ここで，目的関数 $J_{\mathrm{aug}}$ の終端コストを無くし, $t_{\mathrm{max}}\rightarrow\infty$ とした場合, $\dot{\mathrm{P}}$ の項が消え，以下のようになります．
+
+$$
+\mathrm{P}\mathrm{A} + \mathrm{A}^T\mathrm{P} + \mathrm{P}\mathrm{B}\mathrm{R}^{-1}\mathrm{B}^T\mathrm{P} + \mathrm{Q} = \boldsymbol{0}
+$$
+
+この方程式はRicacci代数方程式と呼ばれ，上式を解くことで制御入力 $\bar{\boldsymbol{u}}$ が計算できます．
+
+上記のRicacci代数方程式には2通りの解法があります．1つ目は $P$ に適当な初期値を与え，Ricacci方程式を $\dot{P}$ がゼロになるまで繰り返し解く方法，2つ目は有本-ポッターの方法を利用して解く方法です．以下では後者の有本-ポッターの方法を利用して解く方法について説明します．
+
+
+
