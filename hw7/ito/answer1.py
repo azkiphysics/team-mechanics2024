@@ -132,7 +132,7 @@ class Runner(object):
             total_rewards_data = {
                 "x": {"label": "Episode", "value": np.array(training_data["episode"], dtype=np.float64)},
                 "y": {
-                    "label": "State $s$",
+                    "label": "Total rewards",
                     "value": np.array(training_data["total_rewards"], dtype=np.float64),
                 },
             }
@@ -178,6 +178,12 @@ class Runner(object):
             # 動画の保存
             savefile = "animation.mp4"
             self.movie_maker.make(savedir, evaluate_data["t"][-1], savefile=savefile)
+
+    def close(self):
+        self.buffer.clear()
+        self.run_result.clear()
+        self.evaluate_result.clear()
+        plt.close()
 
 
 ENVS = {"CartPoleEnv": CartPoleEnv}

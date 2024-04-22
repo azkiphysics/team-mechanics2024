@@ -65,6 +65,9 @@ if __name__ == "__main__":
         # 結果の追加
         sse_states.append(sse_state)
         sse_us.append(sse_u)
+
+        # Close runner
+        runner.close()
     sse_states = np.array(sse_states, dtype=np.float64)
     sse_us = np.array(sse_us, dtype=np.float64)
 
