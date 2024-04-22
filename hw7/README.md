@@ -35,15 +35,44 @@ $$
 \frac{d}{dt}(\boldsymbol{x} - \boldsymbol{x}_e) = \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{x}}\Bigg|_{(\boldsymbol{x}_e, \boldsymbol{u}_e)}(\boldsymbol{x} - \boldsymbol{x}_e) + \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{u}}\Bigg|_{(\boldsymbol{x}_e, \boldsymbol{u}_e)}(\boldsymbol{u} - \boldsymbol{u}_e)
 $$
 
+$\bar{\boldsymbol{x}} = \boldsymbol{x} - \boldsymbol{x}_e$ , $\mathrm{A} = \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{x}}\big|_{(\boldsymbol{x}_e, \boldsymbol{u}_e)}$ , $\mathrm{B} = \frac{\partial \boldsymbol{f}}{\partial \boldsymbol{u}}\big|_{(\boldsymbol{x}_e, \boldsymbol{u}_e)}$ とすると，以下のように線形方程式を書き換えることができます．
+
+$$
+\dot{\bar{\boldsymbol{x}}} = \mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}}
+$$
+
+以下ではこの線形運動方程式を利用してLQR制御の導出を行います．
+
 #### LQR制御
-LQR制御では，以下の目的関数を最小にするように制御入力を決定します．
+LQR制御では，以下の目的関数を最小にするように制御入力を決定します．ここで, $\mathrm{Q}$ , $\mathrm{Q}_f$ は半正定値対角行列, $\mathrm{R}$ は正定値対角行列を表します．
 
 $$
-J = \int_{t=0}^{t_{\mathrm{max}}}\frac{1}{2}\Big(\boldsymbol{x}^T\mathrm{Q}\boldsymbol{x} + \boldsymbol{u}^T\mathrm{R}\boldsymbol{u}\Big)dt
+J = \int_{t=0}^{t_{\mathrm{max}}}\frac{1}{2}\Big(\bar{\boldsymbol{x}}^T\mathrm{Q}\bar{\boldsymbol{x}} + \bar{\boldsymbol{u}}^T\mathrm{R}\bar{\boldsymbol{u}}\Big)dt + \frac{1}{2}\bar{\boldsymbol{x}}(t_f)^T\mathrm{Q}_f\bar{\boldsymbol{x}}(t_f)
 $$
 
-目的関数 $J$ を変分 $\delta J$ がゼロになるとき，以下のRicacci代数方程式が導かれます．
+ここでは，線型方程式 $\dot{\bar{\boldsymbol{x}}} = \mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}}$ を制約条件として, 目的関数 $J$ を最小化するので，実際には以下の目的関数 $J_{\mathrm{aug}}$ を最小化します．ここで，変数 $\boldsymbol{\lambda}$ はラグランジュの未定乗数を表しており，下式の右辺第1項の被積分関数に $\boldsymbol{\lambda}^T(\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}} - \dot{\bar{\boldsymbol{x}}})$ を加えることで，運動制約を考慮した最適化が可能となります．
 
 $$
+J_{\mathrm{aug}} = \int_{t=0}^{t_{\mathrm{max}}}\Bigg\{\frac{1}{2}\Big(\bar{\boldsymbol{x}}^T\mathrm{Q}\bar{\boldsymbol{x}} + \bar{\boldsymbol{u}}^T\mathrm{R}\bar{\boldsymbol{u}}\Big) + \boldsymbol{\lambda}^T(\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}} - \dot{\bar{\boldsymbol{x}}})\Bigg\}dt + \frac{1}{2}\bar{\boldsymbol{x}}(t_f)^T\mathrm{Q}_f\bar{\boldsymbol{x}}(t_f)
+$$
 
+目的関数 $J_{\mathrm{aug}}$ を最小にするための必要条件は，変分 $\delta J_{\mathrm{aug}}$ がゼロになることです．そこで，変分 $\delta J_{\mathrm{aug}}$ を計算すると
+
+$$
+\begin{eqnarray}
+    \delta J_{\mathrm{aug}} &=& \int_{t=0}^{t_{\mathrm{max}}}\Bigg\{\Big(\bar{\boldsymbol{x}}^T\mathrm{Q}\delta\bar{\boldsymbol{x}} + \bar{\boldsymbol{u}}^T\mathrm{R}\delta\bar{\boldsymbol{u}}\Big) + \delta\boldsymbol{\lambda}^T(\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}} - \dot{\bar{\boldsymbol{x}}}) + \boldsymbol{\lambda}^T(\mathrm{A}\delta\bar{\boldsymbol{x}} + \mathrm{B}\delta\bar{\boldsymbol{u}} - \delta\dot{\bar{\boldsymbol{x}}})\Bigg\}dt + \bar{\boldsymbol{x}}(t_f)^T\mathrm{Q}_f\delta\bar{\boldsymbol{x}}(t_f)
+
+    &=& \int_{t=0}^{t_{\mathrm{max}}}\Big\{(\bar{\boldsymbol{x}}^T\mathrm{Q} + \boldsymbol{\lambda}^T\mathrm{A} + \dot{\boldsymbol{\lambda}}^T)\delta\bar{\boldsymbol{x}} + (\bar{\boldsymbol{u}}^T\mathrm{R} + \boldsymbol{\lambda}^T\mathrm{B})\delta\bar{\boldsymbol{u}} + (\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}})^T\delta\boldsymbol{\lambda}\Big\}dt + \Big\{\bar{\boldsymbol{x}}(t_f)^T\mathrm{Q}_f - \boldsymbol{\lambda}^T(t_f)\Big\}\delta\bar{\boldsymbol{x}}(t_f)
+\end{eqnarray}
+$$
+
+となるので，$\delta J_{\mathrm{aug}} = 0$ となるための条件は，
+
+$$
+\begin{cases}
+    \bar{\boldsymbol{x}}^T\mathrm{Q} + \boldsymbol{\lambda}^T\mathrm{A} + \dot{\boldsymbol{\lambda}}^T = \boldsymbol{0}\\
+    \bar{\boldsymbol{u}}^T\mathrm{R} + \boldsymbol{\lambda}^T\mathrm{B} = \boldsymbol{0}\\
+    \dot{\bar{\boldsymbol{x}}} = \mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}}\\
+    \bar{\boldsymbol{x}}(t_f)^T\mathrm{Q}_f - \boldsymbol{\lambda}^T(t_f) = \boldsymbol{0}
+\end{cases}
 $$
