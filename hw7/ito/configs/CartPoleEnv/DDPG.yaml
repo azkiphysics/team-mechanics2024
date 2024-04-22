@@ -27,7 +27,7 @@ env:
       - 0.0
       - 0.0
     Q:
-      - 0.1
+      - 0.0
       - 10.0
       - 0.0
       - 0.0
@@ -37,12 +37,12 @@ env:
     - name: DDPGMultiBody
       init:
         state_low:
-          - -3.5
+          - -4.5
           - -0.5
           - -10.0
           - -10.0
         state_high:
-          - 3.5
+          - 2.5
           - 0.5
           - 10.0
           - 10.0
@@ -71,8 +71,8 @@ runner:
   init: {}
   reset: {}
   run:
-    total_timesteps: 100000
-    learning_starts: 5000
+    total_timesteps: 1000000
+    learning_starts: 10000
     trainfreq: 1
   evaluate:
     moviefreq: 1
