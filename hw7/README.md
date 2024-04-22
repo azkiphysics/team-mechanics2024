@@ -23,9 +23,24 @@ conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvi
 ```
 
 ### 課題1 (倒立振子のLQR制御)
-課題1では，LQR制御により倒立振子環境の外力項 $u$ に適切な値を入力することで，倒立維持を行います．
+課題1では，LQR制御により倒立振子環境の倒立維持を行います．`common/agents.py`の`LQRAgent.reset`メソッド内でRicacci代数方程式を解くプログラムを実装し，以下のプログラムをご自身が作成したディレクトリ上で実行してください．
+
+```zsh
+python answer1.py configs/CartPoleEnv/LQR.yaml
+```
+
+プログラムをコマンドプロンプトから実行すると，`results/CartPoleEnv/LQR`ディレクトリ内に結果が保存されているので制御が上手くいったか確認してください．上手くいくと，下図のような図が`state.png`で得られると思います．
+
+![](ito/results/CartPoleEnv/LQR/state.png)
 
 ### 課題2 (LQR制御のパレート解)
+課題2では，LQR制御の目的関数内の係数行列 $\mathrm{Q}$ と $\mathrm{R}$ を変えた時の制御結果について調べます．以下のプログラムをご自身が作成したディレクトリ上で実行してください．
+
+```zsh
+python answer1.py configs/CartPoleEnv/LQR.yaml
+```
+
+プログラムをコマンドプロンプトから実行すると，`results/CartPoleEnv/LQR`内にパレート解の結果が`pareto.png`という図に出力されます．
 
 ### 解説
 #### 倒立振子の運動方程式の線形化
