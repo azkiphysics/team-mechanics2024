@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Sequence
+from typing import Dict, List, Literal, Sequence
 
 import cv2
 import matplotlib.pyplot as plt
@@ -45,7 +45,11 @@ class FigureMaker(object):
         else:
             self.ax.cla()
 
-    def make(self, data: Dict[str, Dict[str, np.ndarray | List[Dict[str, np.ndarray]]]]):
+    def make(
+        self,
+        data: Dict[str, Dict[str, np.ndarray | List[Dict[str, np.ndarray]]]],
+        draw_type: Literal["plot", "scatter"] = "plot",
+    ):
         """図の作成"""
         x = data.get("x")
         y = data.get("y")
@@ -56,10 +60,16 @@ class FigureMaker(object):
 
         if isinstance(y_value, list):
             for y_value_idx in y_value:
-                self.ax.plot(x_value, y_value_idx.get("value"), label=y_value_idx.get("label", ""))
+                if draw_type == "plot":
+                    self.ax.plot(x_value, y_value_idx.get("value"), label=y_value_idx.get("label", ""))
+                elif draw_type == "scatter":
+                    self.ax.scatter(x_value, y_value_idx.get("value"), label=y_value_idx.get("label", ""))
             self.ax.legend(loc="upper right")
         else:
-            self.ax.plot(x_value, y_value)
+            if draw_type == "plot":
+                self.ax.plot(x_value, y_value)
+            elif draw_type == "scatter":
+                self.ax.scatter(x_value, y_value)
         self.ax.set_xlabel(x_label)
         self.ax.set_ylabel(y_label)
 

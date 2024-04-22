@@ -41,34 +41,41 @@ if __name__ == "__main__":
         "reset": config["buffer"]["reset"],
     }
 
-    # Runnerの設定
-    runner = Runner(env_config, agent_config, buffer_config, **config["runner"]["init"])
-    config_runner_reset = config["runner"]["reset"].copy()
-    config_runner_reset["Q"] = 1.0
-
-    # パレート最適化集合の計算
+    # パレート最適解集合の計算
     sse_states = []
     sse_us = []
     for R in tqdm(np.linspace(0.0, 10.0, 101)[1:]):
-        config_runner_reset["R"] = R
+        # Q, Rの設定
+        env_config["reset"]["Q"] = 1.0
+        env_config["reset"]["R"] = R
+        agent_config["reset"]["Q"] = 1.0
+        agent_config["reset"]["R"] = R
+
+        # Runnerの設定
+        runner = Runner(env_config, agent_config, buffer_config, **config["runner"]["init"])
         runner.reset(**config["runner"]["reset"])
+
+        # パレート最適解の計算
         runner.evaluate(**config["runner"]["evaluate"])
         states = np.array(runner.evaluate_result.get()["s"], dtype=np.float64)
         us = np.array(runner.evaluate_result.get()["u"], dtype=np.float64)
         sse_state = np.sum(np.linalg.norm(states, axis=1) ** 2) * runner.env.unwrapped.dt
         sse_u = np.sum(np.linalg.norm(us, axis=1) ** 2) * runner.env.unwrapped.dt
+
+        # 結果の追加
         sse_states.append(sse_state)
         sse_us.append(sse_u)
     sse_states = np.array(sse_states, dtype=np.float64)
     sse_us = np.array(sse_us, dtype=np.float64)
 
+    # データの保存
     figure_data = {
-        "x": {"label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{x}^T\\boldsymbol{x}$", "value": sse_states},
-        "y": {"label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{u}^T\\boldsymbol{u}$", "value": sse_us},
+        "x": {"label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{x}^T\\boldsymbol{x}dt$", "value": sse_states},
+        "y": {"label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{u}^T\\boldsymbol{u}dt$", "value": sse_us},
     }
     savedir = config["runner"]["save"]["savedir"]
     savefile = "pareto_optimal_solutions.png"
     figure_maker = FigureMaker()
     figure_maker.reset()
-    figure_maker.make(figure_data)
+    figure_maker.make(figure_data, draw_type="scatter")
     figure_maker.save(savedir, savefile=savefile)
