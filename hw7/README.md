@@ -1,6 +1,6 @@
 ## 力学系ゼミ 第7回 プログラミング課題
 ### 概要
-第7回は，第6回で実装した倒立振子環境(`CartPoleEnv`)を用いて，LQR制御と呼ばれる現代制御手法によりカート上のポールの倒立状態を維持する課題を行います．
+第7回は，第6回で実装した倒立振子環境(`CartPoleEnv`)を用いて，現代制御の一つであるLQR制御により, カート上のポールの倒立状態を維持するという課題を行います．
 
 課題を作成する際は，hw7ディレクトリ内にフォルダ(フォルダ名: `(名前)`)を作成し (e.g., `ito`)，作成したフォルダ内に課題ごとのファイルを`answer(課題番号).py`として作成してください．(e.g., `answer1.py`, `answer2-1.py`)
 
@@ -23,7 +23,7 @@ conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvi
 ```
 
 ### 課題1 (倒立振子のLQR制御)
-課題1では，LQR制御により倒立振子環境の倒立維持を行います．`common/agents.py`の`LQRAgent.reset`メソッド内でRicacci代数方程式を解くプログラムを実装し，以下のプログラムをご自身が作成したディレクトリ上で実行してください．
+課題1では，LQR制御により倒立振子環境の倒立維持を行います．`common/agents.py`の`LQRAgent.reset`メソッド内でRicacci代数方程式を解くプログラムを実装し，以下のコマンドをご自身が作成したディレクトリ上で実行してください．
 
 ```zsh
 python answer1.py configs/CartPoleEnv/LQR.yaml
@@ -34,7 +34,7 @@ python answer1.py configs/CartPoleEnv/LQR.yaml
 ![](ito/results/CartPoleEnv/LQR/state.png)
 
 ### 課題2 (LQR制御のパレート解)
-課題2では，LQR制御の目的関数内の係数行列 $\mathrm{Q}$ と $\mathrm{R}$ を変えた時の制御結果について調べます．以下のプログラムをご自身が作成したディレクトリ上で実行してください．
+課題2では，LQR制御の目的関数内の係数行列 $\mathrm{Q}$ と $\mathrm{R}$ を変えた時の制御結果について調べます．以下のコマンドをご自身が作成したディレクトリ上で実行してください．
 
 ```zsh
 python answer1.py configs/CartPoleEnv/LQR.yaml
