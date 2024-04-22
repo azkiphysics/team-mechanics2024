@@ -230,7 +230,8 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
 
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
         s = self.get_state(x)
-        reward = np.exp(-0.5 * (s @ self.Q @ s + u @ self.R @ u))
+        out_of_bound = np.sum(s < self.state_low) > 0 or np.sum(s > self.state_high) > 0
+        reward = np.exp(-0.5 * (s @ self.Q @ s + u @ self.R @ u)) - out_of_bound
         return reward
 
     def get_truncated(self, t: float, x: np.ndarray, u: np.ndarray) -> bool:
