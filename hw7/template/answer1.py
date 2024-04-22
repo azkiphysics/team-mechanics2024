@@ -187,7 +187,7 @@ RUNNERS = {"Runner": Runner}
 WRAPPERS = {"LQRMultiBody": LQRMultiBodyEnvWrapper}
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Gymnasium training")
+    parser = argparse.ArgumentParser("Optimal control")
     parser.add_argument("config_path", type=str)
     args = parser.parse_args()
 
