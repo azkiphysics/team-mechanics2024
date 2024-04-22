@@ -84,27 +84,72 @@ $$
 \dot{\mathrm{P}}\bar{\boldsymbol{x}} + \mathrm{P}(\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}}) + \mathrm{Q}\bar{\boldsymbol{x}} + \mathrm{A}^T\mathrm{P}\bar{\boldsymbol{x}} = \boldsymbol{0}
 $$
 
-さらに，第2式を $\bar{\boldsymbol{u}}$ について解くと, $\bar{\boldsymbol{u}} = \mathrm{R}^{-1}\mathrm{B}^T\mathrm{P}\bar{\boldsymbol{x}}$ となるので，これを上式に代入すると，以下の方程式が得られます．
+さらに，第2式を $\bar{\boldsymbol{u}}$ について解くと, $\bar{\boldsymbol{u}} = -\mathrm{R}^{-1}\mathrm{B}^T\mathrm{P}\bar{\boldsymbol{x}}$ となるので，これを上式に代入すると，以下の方程式が得られます．
 
 $$
-\dot{\mathrm{P}}\bar{\boldsymbol{x}} + \mathrm{P}\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{A}^T\mathrm{P}\bar{\boldsymbol{x}} + \mathrm{P}\mathrm{B}\mathrm{R}^{-1}\mathrm{B}^T\mathrm{P}\bar{\boldsymbol{x}} + \mathrm{Q}\bar{\boldsymbol{x}} = \boldsymbol{0}
+\dot{\mathrm{P}}\bar{\boldsymbol{x}} + \mathrm{P}\mathrm{A}\bar{\boldsymbol{x}} + \mathrm{A}^T\mathrm{P}\bar{\boldsymbol{x}} - \mathrm{P}\mathrm{B}\mathrm{R}^{-1}\mathrm{B}^T\mathrm{P}\bar{\boldsymbol{x}} + \mathrm{Q}\bar{\boldsymbol{x}} = \boldsymbol{0}
 $$
 
 この式は任意の $\bar{\boldsymbol{x}}$ について成り立つので， $\bar{\boldsymbol{x}}$ を除いた以下の行列方程式の形で表されます．
 
 $$
-\dot{\mathrm{P}} + \mathrm{P}\mathrm{A} + \mathrm{A}^T\mathrm{P} + \mathrm{P}\mathrm{B}\mathrm{R}^{-1}\mathrm{B}^T\mathrm{P} + \mathrm{Q} = \boldsymbol{0}
+\dot{\mathrm{P}} + \mathrm{P}\mathrm{A} + \mathrm{A}^T\mathrm{P} - \mathrm{P}\mathrm{B}\mathrm{R}^{-1}\mathrm{B}^T\mathrm{P} + \mathrm{Q} = \boldsymbol{0}
 $$
 
 この方程式はRicacci方程式と呼ばれており，終端条件を $P = S_f$ として時間前方積分をしてあげることで，各時刻の $\mathrm{P}$ が計算でき，制御入力 $\bar{\boldsymbol{u}}$ を計算することができます．ここで，目的関数 $J_{\mathrm{aug}}$ の終端コストを無くし, $t_{\mathrm{max}}\rightarrow\infty$ とした場合, $\dot{\mathrm{P}}$ の項が消え，以下のようになります．
 
 $$
-\mathrm{P}\mathrm{A} + \mathrm{A}^T\mathrm{P} + \mathrm{P}\mathrm{B}\mathrm{R}^{-1}\mathrm{B}^T\mathrm{P} + \mathrm{Q} = \boldsymbol{0}
+\mathrm{P}\mathrm{A} + \mathrm{A}^T\mathrm{P} - \mathrm{P}\mathrm{B}\mathrm{R}^{-1}\mathrm{B}^T\mathrm{P} + \mathrm{Q} = \boldsymbol{0}
 $$
 
 この方程式はRicacci代数方程式と呼ばれ，上式を解くことで制御入力 $\bar{\boldsymbol{u}}$ が計算できます．
 
 上記のRicacci代数方程式には2通りの解法があります．1つ目は $P$ に適当な初期値を与え，Ricacci方程式を $\dot{P}$ がゼロになるまで繰り返し解く方法，2つ目は有本-ポッターの方法を利用して解く方法です．以下では後者の有本-ポッターの方法を利用して解く方法について説明します．
 
+最適制御下の運動方程式( $x$ に関する微分方程式)と随伴方程式( $\lambda$ に関する微分方程式)をまとめた正準方程式は以下のように書くことができます．
 
+$$
+\frac{d}{dt}\begin{bmatrix}
+    \bar{\boldsymbol{x}}\\
+    \boldsymbol{\lambda}
+\end{bmatrix} = \begin{bmatrix}
+    \mathrm{A} & -\mathrm{BR^{-1}B^T}\\
+    -\mathrm{Q} & -\mathrm{A}
+\end{bmatrix}\begin{bmatrix}
+    \bar{\boldsymbol{x}}\\
+    \boldsymbol{\lambda}
+\end{bmatrix} = \mathrm{A}_H\begin{bmatrix}
+    \bar{\boldsymbol{x}}\\
+    \boldsymbol{\lambda}
+\end{bmatrix}
+$$
+
+$\mathrm{A}_H$ をハミルトニアン行列と言います．ハミルトニアン行列の性質として, $n$ 個の安定な固有値と $n$ 個の不安定な固有値を持つことが知られています (証明は[こちら](https://stlab.ssi.ist.hokudai.ac.jp/~yuhyama/lecture/digital/digi-part2.pdf)のp.53をご確認ください)．上記の正準方程式が漸近安定であるための条件は，正準方程式系がハミルトニアン行列 $\mathrm{A}_H$ の安定な固有値に対応する $n$ 次元の固有ベクトル空間に制約されたダイナミクスであることですが，これは $\boldsymbol{\lambda} = \mathrm{P}\bar{\boldsymbol{x}}$ という条件により満たされています．そこで, $\mathrm{A}_H$ の安定な固有値に対応する固有ベクトル空間を，安定な固有値で構成された行列 $\mathrm{\Lambda}$ とそれに対応する固有ベクトル行列 $\Big[S_1^T, S_2^T\Big]^T$ を用いて， 
+
+$$
+\mathrm{A}_H\begin{bmatrix}
+    S_1\\
+    S_2
+\end{bmatrix} = \begin{bmatrix}
+    S_1\\
+    S_2
+\end{bmatrix}\boldsymbol{\Lambda}
+$$
+
+と表すと, $[\bar{\boldsymbol{x}}^T, \boldsymbol{\lambda}^T]$ は係数ベクトル $\boldsymbol{k}$ を用いて以下のように表すことができます．
+
+$$
+\begin{bmatrix}
+    \bar{\boldsymbol{x}}\\
+    \boldsymbol{\lambda}
+\end{bmatrix} = \begin{bmatrix}
+    \bar{\boldsymbol{x}}\\
+    \mathrm{P}\bar{\boldsymbol{x}}
+\end{bmatrix} = \begin{bmatrix}
+    \mathrm{S}_1\\
+    \mathrm{S}_2
+\end{bmatrix}\boldsymbol{k}
+$$
+
+以上より，行列 $\mathrm{P}$ は $\mathrm{P} = \mathrm{S}_2\mathrm{S}_1^{-1}$ となります．
 
