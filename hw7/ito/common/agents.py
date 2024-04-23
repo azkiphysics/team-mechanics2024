@@ -1,3 +1,6 @@
+import os
+import pickle
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -25,6 +28,9 @@ class Agent(object):
         raise NotImplementedError()
 
     def train(self, buffer: Buffer, **kwargs):
+        pass
+
+    def save(self, savedir: str):
         pass
 
 
@@ -57,6 +63,13 @@ class LQRAgent(Agent):
 
     def act(self, obs: np.ndarray) -> np.ndarray:
         return (self.K @ obs).astype(self.env.action_space.dtype)
+
+    def save(self, savedir: str):
+        _savedir = os.path.join(savedir, "agent")
+        os.makedirs(_savedir, exist_ok=True)
+        lqr_data = {"Q": self.Q, "R": self.R, "K": self.K}
+        with open(os.path.join(_savedir, "lqr_data.pickle"), "wb") as f:
+            pickle.dump(lqr_data, f)
 
 
 class DRLAgent(Agent):
@@ -100,6 +113,7 @@ class DQNAgent(DRLAgent):
         scheduler_last_ratio: float = 1.0,
         scheduler_iters: int = 0,
         device: torch.device | str = "auto",
+        loaddir: str | None = None,
     ) -> None:
         self.env = env
 
@@ -121,7 +135,14 @@ class DQNAgent(DRLAgent):
             nn.ReLU(),
             nn.Linear(64, n_actions),
         ).to(self.device)
-        self.target_q_network.load_state_dict(self.q_network.state_dict())
+
+        if loaddir is not None:
+            q_network_path = os.path.join(loaddir, "q_network.pt")
+            target_q_network_path = os.path.join(loaddir, "taget_q_network.pt")
+            self.q_network.load_state_dict(torch.load(q_network_path))
+            self.target_q_network.load_state_dict(torch.load(target_q_network_path))
+        else:
+            self.target_q_network.load_state_dict(self.q_network.state_dict())
         self.target_q_network.train(False)
 
         self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=learning_rate)
@@ -211,6 +232,18 @@ class DQNAgent(DRLAgent):
 
         self.q_network.train(False)
 
+    def save(self, savedir: str):
+        _savedir = os.path.join(savedir, "agent")
+        os.makedirs(_savedir, exist_ok=True)
+        q_network_path = os.path.join(_savedir, "q_network.pt")
+        target_q_network_path = os.path.join(_savedir, "target_q_network.pt")
+        self.q_network.to("cpu")
+        self.target_q_network.to("cpu")
+        torch.save(self.q_network.state_dict(), q_network_path)
+        torch.save(self.target_q_network.state_dict(), target_q_network_path)
+        self.q_network.to(self.device)
+        self.target_q_network.to(self.device)
+
 
 class DDPGAgent(DRLAgent):
     def __init__(
@@ -227,6 +260,7 @@ class DDPGAgent(DRLAgent):
         critic_scheduler_last_ratio: float = 1.0,
         critic_scheduler_iters: int = 0,
         device: torch.device | str = "auto",
+        loaddir: str | None = None,
     ) -> None:
         self.env = env
         n_observations = env.observation_space.shape[0]
@@ -249,8 +283,6 @@ class DDPGAgent(DRLAgent):
             nn.Linear(300, n_actions),
             nn.Tanh(),
         ).to(self.device)
-        self.target_policy.load_state_dict(self.policy.state_dict())
-        self.target_policy.train(False)
 
         self.q_network = nn.Sequential(
             nn.Linear(n_observations + n_actions, 400),
@@ -266,7 +298,20 @@ class DDPGAgent(DRLAgent):
             nn.ReLU(),
             nn.Linear(300, 1),
         ).to(self.device)
-        self.target_q_network.load_state_dict(self.q_network.state_dict())
+
+        if loaddir is not None:
+            policy_path = os.path.join(loaddir, "policy.pt")
+            target_policy_path = os.path.join(loaddir, "target_policy.pt")
+            q_network_path = os.path.join(loaddir, "q_network.pt")
+            target_q_network_path = os.path.join(loaddir, "target_q_network.pt")
+            self.policy.load_state_dict(torch.load(policy_path))
+            self.target_policy.load_state_dict(torch.load(target_policy_path))
+            self.q_network.load_state_dict(torch.load(q_network_path))
+            self.target_q_network.load_state_dict(torch.load(target_q_network_path))
+        else:
+            self.target_policy.load_state_dict(self.policy.state_dict())
+            self.target_q_network.load_state_dict(self.q_network.state_dict())
+        self.target_policy.train(False)
         self.target_q_network.train(False)
 
         self.actor_optimizer = torch.optim.Adam(self.policy.parameters(), lr=actor_learning_rate)
@@ -371,6 +416,26 @@ class DDPGAgent(DRLAgent):
                 target_param.data.mul_(1 - self.tau)
                 target_param.data.add_(self.tau * param.data)
 
+    def save(self, savedir: str):
+        _savedir = os.path.join(savedir, "agent")
+        os.makedirs(_savedir, exist_ok=True)
+        policy_path = os.path.join(_savedir, "policy.pt")
+        target_policy_path = os.path.join(_savedir, "target_policy.pt")
+        q_network_path = os.path.join(_savedir, "q_network.pt")
+        target_q_network_path = os.path.join(_savedir, "target_q_network.pt")
+        self.policy.to("cpu")
+        self.target_policy.to("cpu")
+        self.q_network.to("cpu")
+        self.target_q_network.to("cpu")
+        torch.save(self.policy.state_dict(), policy_path)
+        torch.save(self.target_policy.state_dict(), target_policy_path)
+        torch.save(self.q_network.state_dict(), q_network_path)
+        torch.save(self.target_q_network.state_dict(), target_q_network_path)
+        self.policy.to(self.device)
+        self.target_policy.to(self.device)
+        self.q_network.to(self.device)
+        self.target_q_network.to(self.device)
+
 
 class TD3Agent(DDPGAgent):
     def __init__(
@@ -390,6 +455,7 @@ class TD3Agent(DDPGAgent):
         target_noise_clip: float = 0.5,
         policy_delay: int = 2,
         device: torch.device | str = "auto",
+        loaddir: str | None = None,
     ) -> None:
         self.env = env
         n_observations = env.observation_space.shape[0]
@@ -412,8 +478,6 @@ class TD3Agent(DDPGAgent):
             nn.Linear(300, n_actions),
             nn.Tanh(),
         ).to(self.device)
-        self.target_policy.load_state_dict(self.policy.state_dict())
-        self.target_policy.train(False)
 
         self.q_networks = tuple(
             nn.Sequential(
@@ -435,8 +499,22 @@ class TD3Agent(DDPGAgent):
             ).to(self.device)
             for _ in range(2)
         )
-        for q_network, target_q_network in zip(self.q_networks, self.target_q_networks):
-            target_q_network.load_state_dict(q_network.state_dict())
+        if loaddir is not None:
+            policy_path = os.path.join(loaddir, "policy.pt")
+            target_policy_path = os.path.join(loaddir, "target_policy.pt")
+            self.policy.load_state_dict(torch.load(policy_path))
+            self.target_policy.load_state_dict(torch.load(target_policy_path))
+        else:
+            self.target_policy.load_state_dict(self.policy.state_dict())
+        self.target_policy.train(False)
+        for idx, (q_network, target_q_network) in enumerate(zip(self.q_networks, self.target_q_networks)):
+            if loaddir is not None:
+                q_network_path = os.path.join(loaddir, f"q_network{idx + 1}.pt")
+                target_q_network_path = os.path.join(loaddir, f"target_q_network{idx + 1}.pt")
+                self.q_network.load_state_dict(torch.load(q_network_path))
+                self.target_q_network.load_state_dict(torch.load(target_q_network_path))
+            else:
+                target_q_network.load_state_dict(q_network.state_dict())
             target_q_network.train(False)
 
         self.actor_optimizer = torch.optim.Adam(self.policy.parameters(), lr=actor_learning_rate)
@@ -526,7 +604,7 @@ class TD3Agent(DDPGAgent):
             self.policy.train(True)
             action_pi_pt = self.policy.forward(obs_pt).clamp(-1, 1)
             obs_action_pi_pt = torch.concat([obs_pt, action_pi_pt], dim=1)
-            q_pi_pt = self.q_networks[0].forward(obs_action_pi_pt)
+            q_pi_pt: torch.Tensor = self.q_networks[0].forward(obs_action_pi_pt)
             actor_loss_pt = -q_pi_pt.mean()
             self.actor_optimizer.zero_grad()
             actor_loss_pt.backward()
@@ -543,3 +621,24 @@ class TD3Agent(DDPGAgent):
                 for param, target_param in zip(self.policy.parameters(), self.target_policy.parameters()):
                     target_param.data.mul_(1 - self.tau)
                     target_param.data.add_(self.tau * param.data)
+
+    def save(self, savedir: str):
+        _savedir = os.path.join(savedir, "agent")
+        os.makedirs(_savedir, exist_ok=True)
+        policy_path = os.path.join(_savedir, "policy.pt")
+        target_policy_path = os.path.join(_savedir, "target_policy.pt")
+        self.policy.to("cpu")
+        self.target_policy.to("cpu")
+        torch.save(self.policy.state_dict(), policy_path)
+        torch.save(self.target_policy.state_dict(), target_policy_path)
+        self.policy.to(self.device)
+        self.target_policy.to(self.device)
+        for idx, (q_network, target_q_network) in enumerate(zip(self.q_networks, self.target_q_networks)):
+            q_network_path = os.path.join(_savedir, f"q_network{idx + 1}.pt")
+            target_q_network_path = os.path.join(_savedir, f"target_q_network{idx + 1}.pt")
+            q_network.to("cpu")
+            target_q_network.to("cpu")
+            torch.save(q_network.state_dict(), q_network_path)
+            torch.save(target_q_network.state_dict(), target_q_network_path)
+            q_network.to(self.device)
+            target_q_network.to(self.device)

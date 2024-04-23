@@ -1,5 +1,7 @@
 import argparse
 import logging
+import os
+import pickle
 from logging import getLogger, Formatter, StreamHandler
 from typing import Dict, List
 
@@ -131,9 +133,15 @@ class Runner(object):
             obs = next_obs.copy()
 
     def save(self, savedir: str):
+        self.agent.save(savedir)
         if len(self.run_result) > 0:
             # 学習結果の保存
             training_data = self.run_result.get()
+            training_savedir = os.path.join(savedir, "run")
+            os.makedirs(training_savedir, exist_ok=True)
+            with open(os.path.join(training_savedir, "training_data.pickle"), "wb") as f:
+                pickle.dump(training_data, f)
+            # 学習結果の描画
             total_rewards_data = {
                 "x": {"label": "Episode", "value": np.array(training_data["episode"], dtype=np.float64)},
                 "y": {
@@ -144,11 +152,16 @@ class Runner(object):
             self.figure_maker.reset()
             self.figure_maker.make(total_rewards_data)
             savefile = "total_rewards.png"
-            self.figure_maker.save(savedir, savefile)
+            self.figure_maker.save(training_savedir, savefile)
 
         if len(self.evaluate_result) > 0:
+            # 評価結果の保存
             evaluate_data = self.evaluate_result.get()
-            # 状態の保存
+            evaluate_savedir = os.path.join(savedir, "evaluate")
+            os.makedirs(evaluate_savedir, exist_ok=True)
+            with open(os.path.join(evaluate_savedir, "evaluate_data.pickle"), "wb") as f:
+                pickle.dump(evaluate_data, f)
+            # 状態の描画
             state_data = {
                 "x": {"label": "Time $t$ s", "value": np.array(evaluate_data["t"], dtype=np.float64)},
                 "y": {
@@ -162,9 +175,9 @@ class Runner(object):
             savefile = "state.png"
             self.figure_maker.reset()
             self.figure_maker.make(state_data)
-            self.figure_maker.save(savedir, savefile=savefile)
+            self.figure_maker.save(evaluate_savedir, savefile=savefile)
 
-            # 制御入力の保存
+            # 制御入力の描画
             u_data = {
                 "x": {"label": "Time $t$ s", "value": np.array(evaluate_data["t"], dtype=np.float64)[:-1]},
                 "y": {
@@ -178,11 +191,11 @@ class Runner(object):
             savefile = "u.png"
             self.figure_maker.reset()
             self.figure_maker.make(u_data)
-            self.figure_maker.save(savedir, savefile=savefile)
+            self.figure_maker.save(evaluate_savedir, savefile=savefile)
 
             # 動画の保存
             savefile = "animation.mp4"
-            self.movie_maker.make(savedir, evaluate_data["t"][-1], savefile=savefile)
+            self.movie_maker.make(evaluate_savedir, evaluate_data["t"][-1], savefile=savefile)
 
     def close(self):
         self.buffer.clear()
