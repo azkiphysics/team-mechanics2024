@@ -309,11 +309,11 @@ class CartPoleEnv(MultiBodyEnv):
 
     @property
     def observation_space(self) -> Box:
-        return Box(-np.inf, np.inf, (4,), np.float32)
+        return Box(-np.inf, np.inf, (4,), np.float64)
 
     @property
     def action_space(self) -> Box:
-        return Box(-np.inf, np.inf, (1,), np.float32)
+        return Box(-np.inf, np.inf, (1,), np.float64)
 
     def compute_mass_matrix(self, t: float, x: np.ndarray) -> np.ndarray:
         theta_pole = x[3]

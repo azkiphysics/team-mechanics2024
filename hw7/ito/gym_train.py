@@ -10,7 +10,7 @@ import yaml
 from tqdm import trange
 from tqdm.contrib.logging import logging_redirect_tqdm
 
-from common.agents import Agent, DQNAgent, DDPGAgent
+from common.agents import Agent, DQNAgent, DDPGAgent, TD3Agent
 from common.buffers import Buffer
 from common.utils import FigureMaker, MovieMaker
 
@@ -181,7 +181,7 @@ class Runner(object):
             self.movie_maker.make(savedir, 10.0, savefile=savefile)
 
 
-AGENTS = {"DQN": DQNAgent, "DDPG": DDPGAgent}
+AGENTS = {"DQN": DQNAgent, "DDPG": DDPGAgent, "TD3": TD3Agent}
 BUFFERS = {"Buffer": Buffer}
 RUNNERS = {"Runner": Runner}
 WRAPPERS = {}

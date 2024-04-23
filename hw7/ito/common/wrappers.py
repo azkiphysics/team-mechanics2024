@@ -30,13 +30,13 @@ class Wrapper(object):
         return self.env.action_space
 
     def get_state(self, x: np.ndarray) -> np.ndarray:
-        return self.env.get_state(x)
+        return self.env.get_state(x).astype(self.state_space.dtype)
 
     def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
-        return self.get_state(x)
+        return self.env.get_observation(t, x, u=u).astype(self.observation_space.dtype)
 
     def convert_action(self, action: np.ndarray) -> np.ndarray:
-        return action
+        return action.astype(np.float64)
 
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
         return self.env.get_reward(t, x, u)
@@ -88,9 +88,12 @@ class MultiBodyEnvWrapper(Wrapper):
 
     def get_state(self, x: np.ndarray) -> np.ndarray:
         state_indices = self.env.unwrapped.get_state_indices()
-        state = x[state_indices].astype(self.state_space.dtype)
-        target_state = self.target_x[state_indices].astype(self.state_space.dtype)
-        return state - target_state
+        state = x[state_indices]
+        target_state = self.target_x[state_indices]
+        return (state - target_state).astype(self.state_space.dtype)
+
+    def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
+        return self.get_state(x).astype(self.observation_space.dtype)
 
     def reset(
         self,
@@ -102,9 +105,9 @@ class MultiBodyEnvWrapper(Wrapper):
         integral_method: str = "runge_kutta_method",
         **kwargs,
     ) -> Tuple[np.ndarray | Dict[str, bool | float | np.ndarray]]:
-        n_obs = self.observation_space.shape[0]
+        n_states = self.state_space.shape[0]
         n_us = self.u_space.shape[0]
-        self.Q = Q * np.identity(n_obs, dtype=np.float64)
+        self.Q = Q * np.identity(n_states, dtype=np.float64)
         self.R = R * np.identity(n_us, dtype=np.float64)
         initial_x = np.array(initial_x, dtype=np.float64)
         target_x = np.array(target_x, dtype=np.float64)
@@ -226,12 +229,11 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         )
         self.action_low = np.array(action_low, dtype=self.env.unwrapped.action_space.dtype)
         self.action_high = np.array(action_high, dtype=self.env.unwrapped.action_space.dtype)
-        self.t_interval = t_interval if t_interval is not None else self.env.unwrapped.dt
+        self.t_interval = max(self.env.unwrapped.dt, t_interval) if t_interval is not None else self.env.unwrapped.dt
 
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
         s = self.get_state(x)
-        out_of_bound = np.sum(s < self.state_low) > 0 or np.sum(s > self.state_high) > 0
-        reward = np.exp(-0.5 * (s @ self.Q @ s + u @ self.R @ u)) - 10.0 * out_of_bound
+        reward = np.exp(-0.5 * (s @ self.Q @ s + u @ self.R @ u))
         return reward
 
     def get_truncated(self, t: float, x: np.ndarray, u: np.ndarray) -> bool:
@@ -245,64 +247,6 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         while self.env.unwrapped.t < t_end:
             next_obs, reward, terminated, truncated, info = super().step(action)
         return next_obs, reward, terminated, truncated, info
-
-
-class QMultiBodyEnvWrapper(RLMultiBodyEnvWrapper):
-    def __init__(
-        self,
-        env: MultiBodyEnv,
-        state_low: float | list | np.ndarray,
-        state_high: float | list | np.ndarray,
-        action_low: float | list | np.ndarray,
-        action_high: float | list | np.ndarray,
-        n_obs_splits: int,
-        n_action_splits: int,
-    ) -> None:
-        super().__init__(env, state_low, state_high, action_low, action_high)
-        self.action_low = np.array(action_low) * np.ones(
-            self.env.unwrapped.action_space.shape + self.env.unwrapped.observation_space.shape,
-            dtype=self.env.unwrapped.action_space.dtype,
-        )
-        self.action_high = np.array(action_high) * np.ones(
-            self.env.unwrapped.action_space.shape + self.env.unwrapped.observation_space.shape,
-            dtype=self.env.unwrapped.action_space.dtype,
-        )
-        self.discrete_states = np.array(
-            [
-                val.reshape(-1)
-                for val in np.meshgrid(
-                    *[np.linspace(low, high, n_obs_splits) for low, high in zip(self.state_low, self.state_high)]
-                )
-            ],
-            dtype=np.float64,
-        ).T
-        self.discrete_actions = np.array(
-            [
-                val.reshape(-1)
-                for val in np.meshgrid(
-                    *[np.linspace(low, high, n_action_splits) for low, high in zip(self.action_low, self.action_high)]
-                )
-            ],
-            dtype=np.float64,
-        ).T
-        self.n_obs_splits = n_obs_splits
-        self.n_action_splits = n_action_splits
-
-    @property
-    def observation_space(self) -> Discrete:
-        return Discrete(self.discrete_states.shape[0])
-
-    @property
-    def action_space(self) -> Discrete:
-        return Discrete(self.discrete_actions.shape[0])
-
-    def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
-        s = self.get_state(x)
-        obs = np.argmin(np.linalg.norm(self.discrete_states - s, axis=1))
-        return obs
-
-    def convert_action(self, action: int) -> np.ndarray:
-        return self.discrete_actions[action]
 
 
 class DQNMultiBodyEnvWrapper(RLMultiBodyEnvWrapper):
@@ -341,7 +285,35 @@ class DQNMultiBodyEnvWrapper(RLMultiBodyEnvWrapper):
         return self.discrete_actions[action]
 
 
-class DDPGMultiBodyEnvWrapper(RLMultiBodyEnvWrapper):
+class ContinuousRLMultiBodyEnvWrapper(RLMultiBodyEnvWrapper):
     @property
     def action_space(self) -> Box:
-        return Box(self.action_low, self.action_high, shape=self.env.action_space.shape, dtype=np.float32)
+        return Box(
+            self.action_low, self.action_high, shape=self.env.action_space.shape, dtype=self.env.action_space.dtype
+        )
+
+
+class RLCartPoleObservationWrapper(Wrapper):
+    """倒立振子環境専用のobservationラッパー
+    強化学習のエージェントが受け取る観測量を(x_cart, Θ_ball, v_cart, w_ball)から
+    (x_cart, cos(Θ_ball), sin(Θ_ball), w_ball)に変換する．
+
+    (注) 本ラッパーは強化学習のみに使用し，RLMultiBodyEnvWrapperよりも後に配置する．
+    """
+
+    @property
+    def observation_space(self) -> Box:
+        low = self.env.observation_space.low
+        high = self.env.observation_space.high
+        new_low = np.array([low[0], -1.0, 1.0, *low[2:]], dtype=np.float64)
+        new_high = np.array([high[0], 1.0, 1.0, *high[2:]], dtype=np.float64)
+        dtype = np.float32
+        return Box(new_low, new_high, dtype=dtype, shape=(new_low.shape[0],))
+
+    def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
+        observation = self.env.get_observation(t, x, u)
+        new_observation = np.zeros(observation.shape[0] + 1, dtype=np.float32)
+        new_observation[[0, 3, 4]] = observation[[0, 2, 3]].copy()
+        new_observation[1] = np.cos(observation[1])
+        new_observation[2] = np.sin(observation[2])
+        return new_observation

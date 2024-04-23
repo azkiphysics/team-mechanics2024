@@ -20,8 +20,8 @@ class Box(object):
             low = np.array(low, dtype=dtype)
         if isinstance(high, Sequence):
             high = np.array(high, dtype=dtype)
-        self.low = low * np.ones_like(shape, dtype=dtype)
-        self.high = high * np.ones_like(shape, dtype=dtype)
+        self.low = low * np.ones(shape, dtype=dtype)
+        self.high = high * np.ones(shape, dtype=dtype)
         self.shape = shape
         self.dtype = dtype
 
