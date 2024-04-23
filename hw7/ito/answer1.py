@@ -221,8 +221,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # configの読み込み
-    with open(args.config_path) as f:
+    with open(args.config_path, "r") as f:
         config = yaml.safe_load(f)
+    config_savedir = config["runner"]["save"]["savedir"]
+    os.makedirs(config_savedir, exist_ok=True)
+    with open(os.path.join(config_savedir, "config.yaml"), "w") as f:
+        yaml.safe_dump(config, f)
 
     # 環境の設定
     env_config = {
