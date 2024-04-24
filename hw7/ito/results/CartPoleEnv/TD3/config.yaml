@@ -9,6 +9,7 @@ agent:
     target_noise: 0.02
     target_noise_clip: 0.05
     tau: 0.005
+    loaddir:
   name: TD3
   reset: {}
 buffer:
@@ -26,6 +27,7 @@ env:
   name: CartPoleEnv
   reset:
     Q: 0.01
+    Qf: 0.0
     R: 0.01
     initial_t: 0.0
     initial_x:

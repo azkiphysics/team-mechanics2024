@@ -511,8 +511,8 @@ class TD3Agent(DDPGAgent):
             if loaddir is not None:
                 q_network_path = os.path.join(loaddir, f"q_network{idx + 1}.pt")
                 target_q_network_path = os.path.join(loaddir, f"target_q_network{idx + 1}.pt")
-                self.q_network.load_state_dict(torch.load(q_network_path))
-                self.target_q_network.load_state_dict(torch.load(target_q_network_path))
+                q_network.load_state_dict(torch.load(q_network_path))
+                target_q_network.load_state_dict(torch.load(target_q_network_path))
             else:
                 target_q_network.load_state_dict(q_network.state_dict())
             target_q_network.train(False)
