@@ -65,9 +65,27 @@ $$
 $$
 
 #### 倒立振子の運動方程式の線形化
-上記の方法を用いて，倒立振子の運動方程式を線形化します．`hw6`では，
+上記の方法を用いて，倒立振子の運動方程式を線形化します．`hw6`では，拡大法を用いて運動方程式の定式化を行いましたが，ここでは消去法を利用して独立変数 $\boldsymbol{q}\_{i}$ に関する運動方程式の定式化を行い，運動方程式の線形化を行います．
 
-以下ではこの線形運動方程式を利用してLQR制御の導出を行います．
+教科書「マルチボディダイナミクス」の10.2.2項に詳しい説明がありますので，ここでは消去法により求めた運動方程式を以下に記載しておきます．倒立振子の独立変数 $\boldsymbol{q}\_{i}$ には，カートの位置 $x_{\mathrm{cart}}$ , ポールの角度 $\theta_{\mathrm{pole}}$ を設定しています．
+
+$$
+\mathrm{M}^I\ddot{\boldsymbol{q}}_I = \boldsymbol{Q}^I
+$$
+
+各変数の意味については教科書の10.2.2項を参考にしてください．上式を用いて状態方程式を定義すると以下のようになります．
+
+$$
+\frac{d}{dt}\begin{bmatrix}
+    \boldsymbol{q}^I\\
+    \dot{\boldsymbol{q}}^I
+\end{bmatrix} = \begin{bmatrix}
+    \dot{\boldsymbol{q}}^I\\
+    M^{-1}\boldsymbol{Q}^I
+\end{bmatrix}
+$$
+
+上式を平衡点 $[{\boldsymbol{q}^I_e}^T, {\dot{\boldsymbol{q}}^I_e}^T] = [1.0, \pi/2, 0.0, 0.0]^T$ 周りで線形化して線形運動方程式を求めます．本シミュレーションでは，行列 $\mathrm{A}$ , $\mathrm{B}$ はそれぞれ数値的に計算して導出しています．シミュレーションでは，この線形運動方程式を利用してLQR制御を行います．
 
 #### LQR制御
 LQR制御では，以下の目的関数を最小にするように制御入力を決定します．ここで, $\mathrm{Q}$ , $\mathrm{Q}_f$ は半正定値対角行列, $\mathrm{R}$ は正定値対角行列を表します．
@@ -150,15 +168,15 @@ $$
 \end{bmatrix}
 $$
 
-$\mathrm{A}_H$ をハミルトニアン行列と言います．ハミルトニアン行列の性質として, $n$ 個の安定な固有値と $n$ 個の不安定な固有値を持つことが知られています (証明は[こちら](https://stlab.ssi.ist.hokudai.ac.jp/~yuhyama/lecture/digital/digi-part2.pdf)のp.53をご確認ください)．上記の正準方程式が漸近安定であるための条件は，正準方程式系がハミルトニアン行列 $\mathrm{A}_H$ の安定な固有値に対応する $n$ 次元の固有ベクトル空間に制約されたダイナミクスであることですが，これは $\boldsymbol{\lambda} = \mathrm{P}\bar{\boldsymbol{x}}$ という条件により満たされています．そこで, $\mathrm{A}_H$ の安定な固有値に対応する固有ベクトル空間を，安定な固有値で構成された行列 $\mathrm{\Lambda}$ とそれに対応する固有ベクトル行列 $\Big[S_1^T, S_2^T\Big]^T$ を用いて， 
+$\mathrm{A}_H$ をハミルトニアン行列と言います．ハミルトニアン行列の性質として, $n$ 個の安定な固有値と $n$ 個の不安定な固有値を持つことが知られています (証明は[こちら](https://stlab.ssi.ist.hokudai.ac.jp/~yuhyama/lecture/digital/digi-part2.pdf)のp.53をご確認ください)．上記の正準方程式が漸近安定であるための条件は，正準方程式系がハミルトニアン行列 $\mathrm{A}_H$ の安定な固有値に対応する $n$ 次元の固有ベクトル空間に制約されたダイナミクスであることですが，これは $\boldsymbol{\lambda} = \mathrm{P}\bar{\boldsymbol{x}}$ という条件により満たされています．そこで, $\mathrm{A}_H$ の安定な固有値に対応する固有ベクトル空間を，安定な固有値で構成された行列 $\mathrm{\Lambda}$ とそれに対応する固有ベクトル行列 $\Big[\mathrm{S}_1^T, \mathrm{S}_2^T\Big]^T$ を用いて， 
 
 $$
 \mathrm{A}_H\begin{bmatrix}
-    S_1\\
-    S_2
+    \mathrm{S}_1\\
+    \mathrm{S}_2
 \end{bmatrix} = \begin{bmatrix}
-    S_1\\
-    S_2
+    \mathrm{S}_1\\
+    \mathrm{S}_2
 \end{bmatrix}\boldsymbol{\Lambda}
 $$
 
