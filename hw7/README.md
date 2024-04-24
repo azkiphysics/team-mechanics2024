@@ -34,18 +34,24 @@ python answer1.py configs/CartPoleEnv/LQR.yaml
 ![](ito/results/CartPoleEnv/LQR/evaluate/state.png)
 
 ### 課題2 (LQR制御のパレート解)
-課題2では，LQR制御の目的関数内の係数行列 $\mathrm{Q}$ と $\mathrm{R}$ を変えた時の制御結果について調べます．以下のコマンドをご自身が作成したディレクトリ上で実行してください．
+課題2では，LQR制御の目的関数内の係数行列 $\mathrm{Q}$ と $\mathrm{R}$ を変えた時の制御結果について調べます．
+
+ここでは, $Q = 1.0$ で固定して $R$ を $0.1\sim 10.0$ まで $0.1$ 刻みで変化させ最適化を行います．そして，最適化後の目的関数の第1項と第2項の値を図にプロットします．
+
+以下のコマンドをご自身が作成したディレクトリ上で実行してください．
 
 ```zsh
 python answer1.py configs/CartPoleEnv/LQR.yaml
 ```
 
-プログラムをコマンドプロンプトから実行すると，`results/CartPoleEnv/LQR`内にパレート解の結果が`pareto.png`という図に出力されます．
+プログラムをコマンドプロンプトから実行すると，全ての条件で最適化が行われ，`results/CartPoleEnv/LQR`内にパレート解の結果が`pareto_optimal_solution.png`という図に出力されます (下図)．
 
 ![](ito/results/CartPoleEnv/LQR/pareto_optimal_solutions.png)
 
+上図から，LQR制御の最適結果が今回の多目的最適化問題のパレートフロントとなっていることが確認できます．
+
 ### 解説
-#### 倒立振子の運動方程式の線形化
+#### 非線形運動方程式の線形化
 LQR制御では，線形な運動方程式を利用します．そこで，倒立振子環境を平衡点まわりで線形化することを考えます．いま，倒立振子の独立変数を $\boldsymbol{x}$ とし，平衡点を $\boldsymbol{x}\_e$ , $\boldsymbol{u}\_e$ とします． 独立変数 $\boldsymbol{x}$ に対する運動方程式を $\dot{\boldsymbol{x}} = \boldsymbol{f}(\boldsymbol{x})$ としたとき， $\boldsymbol{x} = \boldsymbol{x}\_e$ , $\boldsymbol{u}=\boldsymbol{u}\_e$ まわりでテイラー展開すると次式のように表されます．
 
 $$
@@ -57,6 +63,9 @@ $\bar{\boldsymbol{x}} = \boldsymbol{x} - \boldsymbol{x}\_e$ , $\bar{\boldsymbol{
 $$
 \dot{\bar{\boldsymbol{x}}} = \mathrm{A}\bar{\boldsymbol{x}} + \mathrm{B}\bar{\boldsymbol{u}}
 $$
+
+#### 倒立振子の運動方程式の線形化
+上記の方法を用いて，倒立振子の運動方程式を線形化します．`hw6`では，
 
 以下ではこの線形運動方程式を利用してLQR制御の導出を行います．
 
@@ -113,7 +122,7 @@ $$
 \dot{\mathrm{P}} + \mathrm{P}\mathrm{A} + \mathrm{A}^T\mathrm{P} - \mathrm{P}\mathrm{B}\mathrm{R}^{-1}\mathrm{B}^T\mathrm{P} + \mathrm{Q} = \boldsymbol{0}
 $$
 
-この方程式はRicacci方程式と呼ばれており，終端条件を $\mathrm{P} = \mathrm{S}_f$ として時間前方積分をしてあげることで，各時刻の $\mathrm{P}$ が計算でき，制御入力 $\bar{\boldsymbol{u}}$ を計算することができます．ここで，目的関数 $J_{\mathrm{aug}}$ の終端コストを無くし, $t_{\mathrm{max}}\rightarrow\infty$ とした場合, $\dot{\mathrm{P}}$ の項が消え，以下のようになります．
+この方程式はRicacci方程式と呼ばれており，終端条件を $\mathrm{P} = \mathrm{S}\_f$ として時間前方積分をしてあげることで，各時刻の $\mathrm{P}$ が計算でき，制御入力 $\bar{\boldsymbol{u}}$ を計算することができます．ここで，目的関数 $J_{\mathrm{aug}}$ の終端コストを無くし, $t_{\mathrm{max}}\rightarrow\infty$ とした場合, $\dot{\mathrm{P}}$ の項が消え，以下のようになります．
 
 $$
 \mathrm{P}\mathrm{A} + \mathrm{A}^T\mathrm{P} - \mathrm{P}\mathrm{B}\mathrm{R}^{-1}\mathrm{B}^T\mathrm{P} + \mathrm{Q} = \boldsymbol{0}
