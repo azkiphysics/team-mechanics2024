@@ -35,7 +35,7 @@ if __name__ == "__main__":
             "pos": 0.22 * np.array([np.cos(env.x[3] / 1.4), np.sin(env.x[3] / 1.4)]),
             "text": "$\\theta_{\\mathrm{pole}}$",
         },
-        {"pos": np.array([0.44, 0.44]), "text": "$m_{\\mathrm{ball}}g$"},
+        {"pos": np.array([0.44, 0.44]), "text": "$-m_{\\mathrm{ball}}g$"},
         {"pos": np.array([0.51, -0.03]), "text": "$F$"},
     ]
     for text in texts:
