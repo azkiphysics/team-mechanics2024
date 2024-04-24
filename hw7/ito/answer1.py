@@ -118,16 +118,17 @@ class Runner(object):
         self.evaluate_result.reset()
         self.evaluate_result.push(info)
         self.movie_maker.reset()
-        self.movie_maker.add(self.env.render())
-        k_steps = 0
+        frames = self.env.render()
+        self.movie_maker.add(frames[::moviefreq])
+        k_movie_steps = len(frames)
         while not done:
-            k_steps += 1
             action = self.agent.act(obs)
             next_obs, _, terminated, truncated, info = self.env.step(action)
             self.evaluate_result.push(info)
             done = terminated or truncated
-            if k_steps % moviefreq == 0 or done:
-                self.movie_maker.add(self.env.render())
+            frames = self.env.render()
+            self.movie_maker.add(frames[moviefreq - k_movie_steps % moviefreq :: moviefreq])
+            k_movie_steps += len(frames)
             if done:
                 break
             obs = next_obs.copy()

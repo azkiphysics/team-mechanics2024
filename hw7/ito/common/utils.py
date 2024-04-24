@@ -93,8 +93,11 @@ class MovieMaker(object):
     def reset(self):
         self.frames = []
 
-    def add(self, frame: np.ndarray):
-        self.frames.append(frame)
+    def add(self, frames: np.ndarray | List[np.ndarray]):
+        if isinstance(frames, np.ndarray):
+            self.frames.append(frames)
+        else:
+            self.frames.extend(frames)
 
     def make(self, savedir: str, t_max: float, savefile: str = "animation.mp4"):
         os.makedirs(savedir, exist_ok=True)

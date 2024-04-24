@@ -136,7 +136,7 @@ class Env(object):
         info = {"t": self.t, "x": self.x.copy(), "u": u.copy(), "e": e, "s": s.copy()}
         return obs, reward, terminated, truncated, info
 
-    def render(self) -> np.ndarray:
+    def render(self) -> List[np.ndarray]:
         """図の描画"""
         raise NotImplementedError()
 
@@ -408,7 +408,7 @@ class CartPoleEnv(MultiBodyEnv):
             + self.m_ball * self.g * y_ball
         )
 
-    def render(self) -> np.ndarray:
+    def render(self) -> List[np.ndarray]:
         if self.fig is None:
             self.fig, self.ax = plt.subplots()
         self.ax.cla()
@@ -463,4 +463,4 @@ class CartPoleEnv(MultiBodyEnv):
         # 図の描画
         self.fig.canvas.draw()
         frame = np.array(self.fig.canvas.buffer_rgba())[:, :, :3]
-        return frame
+        return [frame]

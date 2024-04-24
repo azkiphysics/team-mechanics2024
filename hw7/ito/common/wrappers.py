@@ -72,7 +72,7 @@ class Wrapper(object):
         info |= {"s": next_state.copy()}
         return next_obs, reward, terminated, truncated, info
 
-    def render(self) -> np.ndarray:
+    def render(self) -> List[np.ndarray]:
         return self.env.render()
 
     @property
@@ -236,12 +236,15 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         self.action_high = np.array(action_high, dtype=self.env.unwrapped.action_space.dtype)
         self.t_interval = max(self.env.unwrapped.dt, t_interval) if t_interval is not None else self.env.unwrapped.dt
 
+        self.ts: List[float] = None
+        self.xs: List[np.ndarray] = None
+
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
         s = self.get_state(x)
-        truncated = super().get_truncated(t, x, u)
+        truncated = self.get_truncated(t, x, u)
         reward = np.exp(-0.5 * (s @ self.Q @ s + u @ self.R @ u))
         if truncated:
-            reward += 25.0 * np.exp(-0.5 * (s @ self.Qf @ s))
+            reward -= 0.5 * s @ self.Qf @ s
         return reward
 
     def get_truncated(self, t: float, x: np.ndarray, u: np.ndarray) -> bool:
@@ -251,10 +254,39 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         return truncated
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray | float | bool | Dict[str, bool | float | np.ndarray]]:
-        t_end = self.env.unwrapped.t + self.t_interval
-        while self.env.unwrapped.t < t_end:
+        t_end = self.unwrapped.t + self.t_interval
+        self.ts.clear()
+        self.xs.clear()
+        while self.unwrapped.t < t_end:
             next_obs, reward, terminated, truncated, info = super().step(action)
+            self.ts.append(self.unwrapped.t)
+            self.xs.append(self.unwrapped.x.copy())
         return next_obs, reward, terminated, truncated, info
+
+    def reset(
+        self,
+        initial_t: float,
+        initial_x: np.ndarray,
+        target_x: List[float] | np.ndarray,
+        Q: float | np.ndarray,
+        Qf: float | np.ndarray,
+        R: float | np.ndarray,
+        integral_method: str = "runge_kutta_method",
+        **kwargs,
+    ) -> Tuple[np.ndarray | Dict[str, bool | float | np.ndarray]]:
+        obs, info = super().reset(initial_t, initial_x, target_x, Q, Qf, R, integral_method, **kwargs)
+        self.ts = [self.unwrapped.t]
+        self.xs = [self.unwrapped.x.copy()]
+        return obs, info
+
+    def render(self) -> List[np.ndarray]:
+        frames = []
+        for t, x in zip(self.ts, self.xs):
+            setattr(self.unwrapped, "t", t)
+            setattr(self.unwrapped, "x", x)
+            frame = super().render()
+            frames.extend(frame)
+        return frames
 
 
 class DQNMultiBodyEnvWrapper(RLMultiBodyEnvWrapper):
