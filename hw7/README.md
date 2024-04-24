@@ -29,9 +29,9 @@ conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvi
 python answer1.py configs/CartPoleEnv/LQR.yaml
 ```
 
-プログラムをコマンドプロンプトから実行すると，`results/CartPoleEnv/LQR`ディレクトリ内に結果が保存されているので制御が上手くいったか確認してください．上手くいくと，下図のような図が`state.png`で得られると思います．
+プログラムをコマンドプロンプトから実行すると，`results/CartPoleEnv/LQR/evaluate`ディレクトリ内に結果が保存されているので制御が上手くいったか確認してください．上手くいくと，下図のような図が得られていると思います．
 
-![](ito/results/CartPoleEnv/LQR/state.png)
+![](ito/results/CartPoleEnv/LQR/evaluate/state.png)
 
 ### 課題2 (LQR制御のパレート解)
 課題2では，LQR制御の目的関数内の係数行列 $\mathrm{Q}$ と $\mathrm{R}$ を変えた時の制御結果について調べます．以下のコマンドをご自身が作成したディレクトリ上で実行してください．
@@ -41,6 +41,8 @@ python answer1.py configs/CartPoleEnv/LQR.yaml
 ```
 
 プログラムをコマンドプロンプトから実行すると，`results/CartPoleEnv/LQR`内にパレート解の結果が`pareto.png`という図に出力されます．
+
+![](ito/results/CartPoleEnv/LQR/pareto_optimal_solutions.png)
 
 ### 解説
 #### 倒立振子の運動方程式の線形化
