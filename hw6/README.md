@@ -246,7 +246,6 @@ $$
 \boldsymbol{q} = \begin{bmatrix}
     x_{\mathrm{cart}}\\
     x_{\mathrm{ball}}\\
-    x_{\mathrm{ball}}\\
     y_{\mathrm{ball}}\\
     \theta_{\mathrm{pole}}\\
 \end{bmatrix}
