@@ -19,6 +19,7 @@ env:
   name: CartPoleEnv
   reset:
     Q: 1.0
+    Qf: 1.0
     R: 1.0
     initial_t: 0.0
     initial_x:

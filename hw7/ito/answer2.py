@@ -82,3 +82,4 @@ if __name__ == "__main__":
     figure_maker.reset()
     figure_maker.make(figure_data, draw_type="scatter")
     figure_maker.save(savedir, savefile=savefile)
+    figure_maker.close()

@@ -27,6 +27,7 @@ env:
       - 0.0
       - 0.0
     Q: 1.0
+    Qf: 1.0
     R: 1.0
   wrappers:
     - name: LQRMultiBody

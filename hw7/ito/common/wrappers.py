@@ -101,6 +101,7 @@ class MultiBodyEnvWrapper(Wrapper):
         initial_x: np.ndarray,
         target_x: List[float] | np.ndarray,
         Q: float | np.ndarray,
+        Qf: float | np.ndarray,
         R: float | np.ndarray,
         integral_method: str = "runge_kutta_method",
         **kwargs,
@@ -108,6 +109,7 @@ class MultiBodyEnvWrapper(Wrapper):
         n_states = self.state_space.shape[0]
         n_us = self.u_space.shape[0]
         self.Q = Q * np.identity(n_states, dtype=np.float64)
+        self.Qf = Qf * np.identity(n_states, dtype=np.float64)
         self.R = R * np.identity(n_us, dtype=np.float64)
         initial_x = np.array(initial_x, dtype=np.float64)
         target_x = np.array(target_x, dtype=np.float64)
@@ -206,7 +208,10 @@ class LQRMultiBodyEnvWrapper(MultiBodyEnvWrapper):
 
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
         s = self.get_state(x)
+        truncated = self.get_truncated(t, x, u)
         cost = 0.5 * (s @ self.Q @ s + u @ self.R @ u) * self.env.unwrapped.dt
+        if truncated:
+            cost += 0.5 * s @ self.Qf @ s
         return -cost
 
 
@@ -233,7 +238,10 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
 
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
         s = self.get_state(x)
+        truncated = super().get_truncated(t, x, u)
         reward = np.exp(-0.5 * (s @ self.Q @ s + u @ self.R @ u))
+        if truncated:
+            reward += 25.0 * np.exp(-0.5 * (s @ self.Qf @ s))
         return reward
 
     def get_truncated(self, t: float, x: np.ndarray, u: np.ndarray) -> bool:

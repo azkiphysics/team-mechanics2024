@@ -103,12 +103,12 @@ class Runner(object):
                 ):
                     self.agent.train(buffer=self.buffer)
                 if done:
-                    logger.info(f"episode: {k_episodes}/ total_rewards: {total_rewards}")
                     k_episodes += 1
+                    logger.info(f"episode: {k_episodes}/ total_rewards: {total_rewards}")
+                    self.run_result.push({"episode": k_episodes, "total_rewards": total_rewards})
                     total_rewards = 0.0
                     obs, _ = self.env.reset(**self.env_config["reset"])
                 obs = next_obs.copy()
-                self.run_result.push({"episode": k_episodes, "total_rewards": total_rewards})
 
     def evaluate(self, moviefreq: int = 100):
         # シミュレーションの実行
@@ -201,7 +201,8 @@ class Runner(object):
         self.buffer.clear()
         self.run_result.clear()
         self.evaluate_result.clear()
-        plt.close()
+        self.figure_maker.close()
+        self.movie_maker.close()
 
 
 ENVS = {"CartPoleEnv": CartPoleEnv}

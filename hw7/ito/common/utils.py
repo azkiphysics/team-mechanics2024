@@ -81,7 +81,7 @@ class FigureMaker(object):
 
     def close(self):
         """matplotlibを閉じる"""
-        plt.close()
+        plt.close("all")
 
 
 class MovieMaker(object):
@@ -107,3 +107,6 @@ class MovieMaker(object):
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             video.write(frame)
         video.release()
+
+    def close(self):
+        self.frames.clear()
