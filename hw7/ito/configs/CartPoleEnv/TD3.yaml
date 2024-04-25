@@ -63,7 +63,7 @@ agent:
     target_noise: 0.1
     target_noise_clip: 0.2
     policy_delay: 2
-    # loaddir: results\CartPoleEnv\TD3\agent
+    loaddir: results/CartPoleEnv/TD3/agent
   reset: {}
 buffer:
   name: Buffer
@@ -75,7 +75,7 @@ runner:
   init: {}
   reset: {}
   run:
-    total_timesteps: 50000
+    total_timesteps: 10000
     learning_starts: 1000
     trainfreq: 1
   evaluate:
