@@ -20,6 +20,7 @@ from common.wrappers import (
     ContinuousRLMultiBodyEnvWrapper,
     LQRMultiBodyEnvWrapper,
     RLCartPoleObservationWrapper,
+    RLTimeObservationWrapper,
 )
 
 # ロガーの設定
@@ -215,6 +216,7 @@ WRAPPERS = {
     "ContinuousRLMultiBody": ContinuousRLMultiBodyEnvWrapper,
     "LQRMultiBody": LQRMultiBodyEnvWrapper,
     "RLCartPoleObservation": RLCartPoleObservationWrapper,
+    "RLTimeObservation": RLTimeObservationWrapper,
 }
 
 if __name__ == "__main__":

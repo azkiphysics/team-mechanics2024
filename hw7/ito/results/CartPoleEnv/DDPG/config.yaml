@@ -11,7 +11,7 @@ agent:
   reset: {}
 buffer:
   init:
-    maxlen: 500000
+    maxlen: 100000
   name: Buffer
   reset: {}
 env:
@@ -24,11 +24,7 @@ env:
   name: CartPoleEnv
   reset:
     Q: 0.01
-    Qf:
-    - 10.0
-    - 0.1
-    - 0.0
-    - 0.0
+    Qf: 2.0
     R: 0.01
     initial_t: 0.0
     initial_x:
@@ -65,7 +61,7 @@ env:
       - -0.5
       - -5.0
       - -5.0
-      t_interval: null
+      t_interval: 0.1
     name: ContinuousRLMultiBody
 runner:
   evaluate:

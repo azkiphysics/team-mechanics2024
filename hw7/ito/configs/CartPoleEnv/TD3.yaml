@@ -26,20 +26,20 @@ env:
       - 0.0
       - 0.0
       - 0.0
-    Q: 0.01
-    Qf: 2.0
-    R: 0.01
+    Q: 2.0
+    Qf: 3.0
+    R: 0.0
   wrappers:
     - name: ContinuousRLMultiBody
       init:
         state_low:
           - -3.5
-          - -0.5
+          - -0.8
           - -5.0
           - -5.0
         state_high:
           - 3.5
-          - 0.5
+          - 0.8
           - 5.0
           - 5.0
         action_low:
@@ -49,30 +49,33 @@ env:
         t_interval: 0.1
     # - name: RLCartPoleObservation
     #   init: {}
+    - name: RLTimeObservation
+      init: {}
 agent:
   name: TD3
   init:
     actor_learning_rate: 1.0e-3
     critic_learning_rate: 1.0e-3
-    gamma: 0.99
+    gamma: 0.999
     batch_size: 512
     tau: 0.005
-    action_noise: 0.01
-    target_noise: 0.02
-    target_noise_clip: 0.05
+    action_noise: 0.1
+    target_noise: 0.1
+    target_noise_clip: 0.2
     policy_delay: 2
+    # loaddir: results\CartPoleEnv\TD3\agent
   reset: {}
 buffer:
   name: Buffer
   init:
-    maxlen: 100000
+    maxlen: 500000
   reset: {}
 runner:
   name: Runner
   init: {}
   reset: {}
   run:
-    total_timesteps: 100000
+    total_timesteps: 50000
     learning_starts: 1000
     trainfreq: 1
   evaluate:
