@@ -23,7 +23,7 @@ conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvi
 ```
 
 ### 課題1 (倒立振子のLQR制御)
-課題1では，LQR制御により倒立振子環境の倒立維持を行います．`common/agents.py`の`LQRAgent.reset`メソッド内でRicacci代数方程式を解くプログラムを実装し，以下のコマンドをご自身が作成したディレクトリ上で実行してください．
+課題1では，LQR制御により倒立振子環境の倒立維持を行います．`common/agents.py`の`LQRAgent.reset`メソッド内でRicacci代数方程式を解くコードを実装し，以下のコマンドをご自身が作成したディレクトリ上で実行してください．
 
 ```zsh
 python answer1.py configs/CartPoleEnv/LQR.yaml
