@@ -30,5 +30,6 @@ runner:
     trainfreq: 1
   evaluate:
     moviefreq: 1
+    renderfreq: 1
   save:
     savedir: results/gym/CartPole-v1/DQN
