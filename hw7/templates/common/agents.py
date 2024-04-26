@@ -37,10 +37,10 @@ class LQRAgent(Agent):
         B = self.env.B
         self.Q = Q * np.identity(self.env.observation_space.shape[0], dtype=self.env.observation_space.dtype)
         self.R = R * np.identity(self.env.action_space.shape[0], dtype=self.env.action_space.dtype)
-        AH = np.block([[A, -B @ np.linalg.inv(self.R) @ B.T], [-self.Q, -A.T]])
-        eig_values, eig_vectors = np.linalg.eig(AH)
-        S1, S2 = np.split(eig_vectors[:, eig_values < 0], 2, axis=0)
-        P = S2 @ np.linalg.inv(S1)
+        """課題1: Ricacci代数方程式の解を求める
+        有本-ポッターの方法を利用して，Ricacci代数方程式を解き，
+        Pを求めるコードを実装してください．
+        """
         self.K = (-np.linalg.inv(self.R) @ B.T @ P).real
 
     def act(self, obs: np.ndarray) -> np.ndarray:
