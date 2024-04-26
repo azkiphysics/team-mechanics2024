@@ -48,7 +48,7 @@ if __name__ == "__main__":
     # パレート最適解集合の計算
     sse_states = []
     sse_us = []
-    for R in tqdm(np.linspace(0.0, 0.1, 11)):
+    for R in tqdm(np.linspace(0.0, 0.1, 11)):  # Swing upの場合は最大値を0.01に設定
         # Q, Rの設定
         env_config["reset"]["R"] = R
 

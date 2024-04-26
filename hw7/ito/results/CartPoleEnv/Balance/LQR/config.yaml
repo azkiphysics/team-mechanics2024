@@ -55,4 +55,4 @@ runner:
     total_timesteps: 0
     trainfreq: 1
   save:
-    savedir: results/CartPoleEnv/LQR
+    savedir: results/CartPoleEnv/Balance/LQR
