@@ -1,6 +1,6 @@
 ## 力学系ゼミ 第7回 プログラミング課題
 ### 概要
-第7回は，第6回で実装した倒立振子環境(`CartPoleEnv`)を用いて，現代制御の一つであるLQR制御により, カート上のポールの倒立状態を維持するという課題を行います．
+第7回は，第6回で実装した倒立振子環境(`CartPoleEnv`)を用いて，現代制御の一つであるLQR制御により, カート上のポールの倒立状態を目標地点で維持するという課題を行います．
 
 課題を作成する際は，hw7ディレクトリ内にフォルダ(フォルダ名: `(名前)`)を作成し (e.g., `ito`)，作成したフォルダ内に課題ごとのファイルを`answer(課題番号).py`として作成してください．(e.g., `answer1.py`, `answer2-1.py`)
 
@@ -10,17 +10,10 @@
 
 ### 準備
 #### ライブラリのインストール
-今回と次回で使用するライブラリのインストールを行います．以下のコマンドを入力して`pyyaml`, `tqdm`, `pytorch`ライブラリをインストールしてください．
+今回使用するライブラリのインストールを行います．以下のコマンドを入力して`pyyaml`, `tqdm`ライブラリをインストールしてください．
 
 ```zsh
 conda install pyyaml tqdm
-conda install pytorch torchvision torchaudio cpuonly -c pytorch
-```
-
-もし，お使いのPCに`GeForce`のグラボが搭載されている場合は，上記2行目のコマンドを以下のように書き換えてください．
-
-```zsh
-conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia # CUDA12.1の場合のコマンド．CUDA 11.8の場合は12.1を11.8に変更する．
 ```
 
 #### テンプレートのコピー&ペースト
@@ -34,7 +27,14 @@ hw7
 ...
 └── (ご自身で作成したディレクトリ)
     ├── common
+    |   ├── agents.py
+    |   ├── buffers.py
+    |   ├── envs.py
+    |   ├── utils.py
+    |   └── wrappers.py
     ├── configs
+    |   └── CartPoleEnv
+    |       └── LQR.yaml
     ├── answer1.py
     └── answer2.py
 ```
