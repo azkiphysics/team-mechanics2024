@@ -28,7 +28,7 @@ conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvi
 コピペ後のファイルの構成が以下のようになっていれば問題ありません．
 
 ```
-hw7
+hw8
 ├── README.md
 ...
 └── (ご自身で作成したディレクトリ)
