@@ -76,4 +76,4 @@ runner:
   evaluate:
     moviefreq: 1
   save:
-    savedir: results/CartPoleEnv/DDPG/action_25.0
+    savedir: results/CartPoleEnv/Balance/DDPG

@@ -80,4 +80,4 @@ runner:
     moviefreq: 1
     renderfreq: 1
   save:
-    savedir: results/CartPoleEnv/TD3
+    savedir: results/CartPoleEnv/Balance/TD3

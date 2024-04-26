@@ -11,8 +11,8 @@ env:
     initial_x:
       - 0.0
       - 0.0
-      - -1.0
-      - -1.5707963267948966
+      - 1.0
+      - 1.8707963267948966
       - 0.0
       - 0.0
       - 0.0
@@ -55,4 +55,4 @@ runner:
     moviefreq: 1
     renderfreq: 100
   save:
-    savedir: results/CartPoleEnv/SwingUp/LQR
+    savedir: results/CartPoleEnv/Balance/LQR
