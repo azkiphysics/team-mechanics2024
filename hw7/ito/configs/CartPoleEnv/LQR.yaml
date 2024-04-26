@@ -52,6 +52,7 @@ runner:
     learning_starts: 0
     trainfreq: 1
   evaluate:
-    moviefreq: 100
+    moviefreq: 1
+    renderfreq: 100
   save:
     savedir: results/CartPoleEnv/LQR

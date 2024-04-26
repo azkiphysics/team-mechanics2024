@@ -111,25 +111,33 @@ class Runner(object):
                     obs, _ = self.env.reset(**self.env_config["reset"])
                 obs = next_obs.copy()
 
-    def evaluate(self, moviefreq: int = 100):
+    def evaluate(self, is_render: bool = True, moviefreq: int = 1, renderfreq: int = 1):
         # シミュレーションの実行
         obs, info = self.env.reset(**self.env_config["reset"])
         self.agent.reset(**self.agent_config["reset"], is_evaluate=True)
         done = False
         self.evaluate_result.reset()
         self.evaluate_result.push(info)
-        self.movie_maker.reset()
-        frames = self.env.render()
-        self.movie_maker.add(frames[::moviefreq])
-        k_movie_steps = len(frames)
+        if is_render:
+            self.movie_maker.reset()
+            frames = self.env.render()
+            self.movie_maker.add(frames[::moviefreq])
+            k_movie_steps = len(frames)
+            k_render_steps = 0
         while not done:
             action = self.agent.act(obs)
             next_obs, _, terminated, truncated, info = self.env.step(action)
             self.evaluate_result.push(info)
             done = terminated or truncated
-            frames = self.env.render()
-            self.movie_maker.add(frames[moviefreq - k_movie_steps % moviefreq :: moviefreq])
-            k_movie_steps += len(frames)
+            if is_render:
+                k_render_steps += 1
+                if k_render_steps % renderfreq == 0:
+                    frames = self.env.render()
+                    if moviefreq == 1:
+                        self.movie_maker.add(frames)
+                    else:
+                        self.movie_maker.add(frames[moviefreq - k_movie_steps % moviefreq :: moviefreq])
+                    k_movie_steps += len(frames)
             if done:
                 break
             obs = next_obs.copy()

@@ -45,7 +45,8 @@ env:
     name: LQRMultiBody
 runner:
   evaluate:
-    moviefreq: 100
+    moviefreq: 1
+    renderfreq: 100
   init: {}
   name: Runner
   reset: {}

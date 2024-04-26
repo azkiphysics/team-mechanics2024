@@ -1,4 +1,5 @@
 import os
+import pickle
 import yaml
 
 import numpy as np
@@ -41,6 +42,14 @@ if __name__ == "__main__":
         "reset": config["buffer"]["reset"],
     }
 
+    runner_config = {
+        "class": Runner,
+        "init": config["runner"]["init"],
+        "reset": config["runner"]["reset"],
+        "evaluate": config["runner"]["evaluate"],
+    }
+    runner_config["evaluate"]["is_render"] = False
+
     # パレート最適解集合の計算
     sse_states = []
     sse_us = []
@@ -52,15 +61,16 @@ if __name__ == "__main__":
         agent_config["reset"]["R"] = R
 
         # Runnerの設定
-        runner = Runner(env_config, agent_config, buffer_config, **config["runner"]["init"])
-        runner.reset(**config["runner"]["reset"])
+        runner: Runner = runner_config["class"](env_config, agent_config, buffer_config, **config["runner"]["init"])
+        runner.reset(**runner_config["reset"])
 
         # パレート最適解の計算
-        runner.evaluate(**config["runner"]["evaluate"])
+        runner.evaluate(**runner_config["evaluate"])
+        t_interval = runner.evaluate_result.get()["t"][1] - runner.evaluate_result.get()["t"][0]
         states = np.array(runner.evaluate_result.get()["s"], dtype=np.float64)
         us = np.array(runner.evaluate_result.get()["u"], dtype=np.float64)
-        sse_state = np.sum(np.linalg.norm(states, axis=1) ** 2) * runner.env.unwrapped.dt
-        sse_u = np.sum(np.linalg.norm(us, axis=1) ** 2) * runner.env.unwrapped.dt
+        sse_state = np.sum(np.linalg.norm(states[:-1], axis=1) ** 2) * t_interval + np.linalg.norm(states[-1]) ** 2
+        sse_u = np.sum(np.linalg.norm(us, axis=1) ** 2) * t_interval
 
         # 結果の追加
         sse_states.append(sse_state)
@@ -72,11 +82,18 @@ if __name__ == "__main__":
     sse_us = np.array(sse_us, dtype=np.float64)
 
     # データの保存
+    savedir = os.path.join(config["runner"]["save"]["savedir"], "pareto_optimal_solutions")
+    os.makedirs(savedir, exist_ok=True)
+    with open(os.path.join(savedir, "sum_square_errors.pickle"), "wb") as f:
+        pickle.dump({"s": sse_states, "u": sse_us}, f)
     figure_data = {
-        "x": {"label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{x}^T\\boldsymbol{x}dt$", "value": sse_states},
+        "x": {
+            "label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{x}^T\\boldsymbol{x}dt"
+            + " + \\boldsymbol{x}^T(t_f)\\boldsymbol{x}(t_f)$",
+            "value": sse_states,
+        },
         "y": {"label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{u}^T\\boldsymbol{u}dt$", "value": sse_us},
     }
-    savedir = config["runner"]["save"]["savedir"]
     savefile = "pareto_optimal_solutions.png"
     figure_maker = FigureMaker()
     figure_maker.reset()

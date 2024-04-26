@@ -1,4 +1,5 @@
 import os
+import pickle
 import yaml
 
 import numpy as np
@@ -29,6 +30,10 @@ if __name__ == "__main__":
         "init": config["agent"]["init"],
         "reset": config["agent"]["reset"],
     }
+    if config["agent"]["name"] == "TD3":
+        agent_config["init"]["action_noise"] *= 0.1
+        agent_config["init"]["target_noise"] *= 0.1
+        agent_config["init"]["target_noise_clip"] *= 0.1
 
     # バッファの設定
     buffer_config = {
@@ -37,10 +42,13 @@ if __name__ == "__main__":
         "reset": config["buffer"]["reset"],
     }
 
+    # Runnerの設定
+    config["runner"]["evaluate"]["is_render"] = False
+
     # パレート最適解集合の計算
     sse_states = []
     sse_us = []
-    for R in tqdm(np.linspace(0.0, 0.1, 11)[1:]):
+    for R in tqdm(np.linspace(0.0, 0.1, 11)):
         # Q, Rの設定
         env_config["reset"]["R"] = R
 
@@ -51,7 +59,7 @@ if __name__ == "__main__":
 
         # パレート最適解の計算
         runner.evaluate(**config["runner"]["evaluate"])
-        t_interval = runner.evaluate_result["t"][1] - runner.evaluate_result["t"][0]
+        t_interval = runner.evaluate_result.get()["t"][1] - runner.evaluate_result.get()["t"][0]
         states = np.array(runner.evaluate_result.get()["s"], dtype=np.float64)
         us = np.array(runner.evaluate_result.get()["u"], dtype=np.float64)
         sse_state = np.sum(np.linalg.norm(states[:-1], axis=1) ** 2) * t_interval + np.linalg.norm(states[-1]) ** 2
@@ -67,6 +75,10 @@ if __name__ == "__main__":
     sse_us = np.array(sse_us, dtype=np.float64)
 
     # データの保存
+    savedir = os.path.join(config["runner"]["save"]["savedir"], "pareto_optimal_solutions")
+    os.makedirs(savedir, exist_ok=True)
+    with open(os.path.join(savedir, "sum_square_errors.pickle"), "wb") as f:
+        pickle.dump({"s": sse_states, "u": sse_us}, f)
     figure_data = {
         "x": {
             "label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{x}^T\\boldsymbol{x}dt"
@@ -75,10 +87,8 @@ if __name__ == "__main__":
         },
         "y": {"label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{u}^T\\boldsymbol{u}dt$", "value": sse_us},
     }
-    savedir = config["runner"]["save"]["savedir"]
-    savefile = "pareto_optimal_solutions.png"
     figure_maker = FigureMaker()
     figure_maker.reset()
     figure_maker.make(figure_data, draw_type="scatter")
-    figure_maker.save(savedir, savefile=savefile)
+    figure_maker.save(savedir, savefile="pareto_optimal_solutions.png")
     figure_maker.close()
