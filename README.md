@@ -23,7 +23,7 @@
 5. Python文法 (numpy, matplotlib)
 6. 数値計算法 (オイラー法, ルンゲクッタ法)
 8. LQR制御
-9. 強化学習 (Q-learning, DQN)
+9. 深層強化学習 (DQN, DDPG, TD3)
 
 ## 準備
 本課題をするにあたり，次の3点を行ってください．
