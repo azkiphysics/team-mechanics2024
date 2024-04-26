@@ -9,6 +9,7 @@
 課題が作成できたら，GitHub上でプルリクエストを開き，伊藤(ユーザー名: azkiphysics)にマージの許可を得てください．伊藤が提出した課題のコードレビューを行い，コードの修正をしていただきます．修正が完了したらマージを行い，その週の課題は終了となります．([プルリクエストの作成](https://github.com/azkiphysics/team-mechanics2024?tab=readme-ov-file#プルリクエストの作成))
 
 ### 準備
+#### ライブラリのインストール
 今回と次回で使用するライブラリのインストールを行います．以下のコマンドを入力して`pyyaml`, `tqdm`, `pytorch`ライブラリをインストールしてください．
 
 ```zsh
@@ -20,6 +21,22 @@ conda install pytorch torchvision torchaudio cpuonly -c pytorch
 
 ```zsh
 conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia # CUDA12.1の場合のコマンド．CUDA 11.8の場合は12.1を11.8に変更する．
+```
+
+#### テンプレートのコピー&ペースト
+ご自身で作成したディレクトリに`templates`内のファイルとフォルダをコピー&ペーストしてください．ファイルの構成はそのままでコピペするようにしてください．(ファイル名を変えるとエラーがでます．)
+
+コピペ後のファイルの構成が以下のようになっていれば問題ありません．
+
+```
+hw7
+├── README.md
+...
+└── (ご自身で作成したディレクトリ)
+    ├── common
+    ├── configs
+    ├── answer1.py
+    └── answer2.py
 ```
 
 ### 課題1 (倒立振子のLQR制御)
