@@ -57,15 +57,15 @@ cd hw7/(ご自身で作成したディレクトリ)
 ```
 
 ### 課題1 (倒立振子のLQR制御)
-課題1では，LQR制御により倒立振子環境の倒立維持を行います．`common/agents.py`の`LQRAgent.reset`メソッド内でRicacci代数方程式を解くコードを実装し，以下のコマンドをご自身が作成したディレクトリ上で実行してください．
+課題1では，倒立振子を $x_{\mathrm{cart}} = 1.0$ に維持するという制御をLQR制御を用いて行います．`common/agents.py`の`LQRAgent.reset`メソッド内でRicacci代数方程式を解くコードを実装し，以下のコマンドをご自身が作成したディレクトリ上で実行してください．
 
 ```zsh
 python answer1.py configs/CartPoleEnv/LQR.yaml
 ```
 
-プログラムをコマンドプロンプトから実行すると，`results/CartPoleEnv/LQR/evaluate`ディレクトリ内に結果が保存されているので制御が上手くいったか確認してください．上手くいくと，下図のような図が得られていると思います．
+プログラムをコマンドプロンプトから実行すると，`results/CartPoleEnv/LQR/evaluate`ディレクトリ内に結果が保存されているので制御が上手くいったか確認してください．上手くいくと，以下の動画のように倒立振子が制御できている様子が確認できます．
 
-![](ito/results/CartPoleEnv/LQR/evaluate/state.png)
+![](ito/results/CartPoleEnv/Balance/LQR/evaluate/animation.mp4)
 
 ### 課題2 (LQR制御のパレート解)
 課題2では，LQR制御の目的関数内の係数行列 $\mathrm{Q}$ と $\mathrm{R}$ を変えた時の制御結果について調べます．
@@ -80,7 +80,7 @@ python answer1.py configs/CartPoleEnv/LQR.yaml
 
 プログラムをコマンドプロンプトから実行すると，全ての条件で最適化が行われ，`results/CartPoleEnv/LQR`内にパレート解の結果が`pareto_optimal_solution.png`という図に出力されます (下図)．
 
-![](ito/results/CartPoleEnv/LQR/pareto_optimal_solutions.png)
+![](ito/results/CartPoleEnv/Balance/LQR/pareto_optimal_solutions.png)
 
 上図から，LQR制御の最適結果が今回の多目的最適化問題のパレートフロントとなっていることが確認できます．
 
