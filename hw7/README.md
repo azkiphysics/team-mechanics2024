@@ -65,7 +65,7 @@ python answer1.py configs/CartPoleEnv/LQR.yaml
 
 プログラムをコマンドプロンプトから実行すると，`results/CartPoleEnv/LQR/evaluate`ディレクトリ内に結果が保存されているので制御が上手くいったか確認してください．上手くいくと，以下の動画のように倒立振子が制御できている様子が確認できます．
 
-![](ito/results/CartPoleEnv/Balance/LQR/evaluate/animation.mp4)
+![](ito/results/CartPoleEnv/Balance/LQR/evaluate/animation.gif)
 
 ### 課題2 (LQR制御のパレート解)
 課題2では，LQR制御の目的関数内の係数行列 $\mathrm{Q}$ と $\mathrm{R}$ を変えた時の制御結果について調べます．
