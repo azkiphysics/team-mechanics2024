@@ -241,13 +241,7 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         action_high: float | list | np.ndarray,
         t_interval: float | None = None,
     ) -> None:
-        super().__init__(env)
-        self.state_low = np.array(state_low) * np.ones(
-            self.env.unwrapped.state_space.shape, dtype=self.env.unwrapped.state_space.dtype
-        )
-        self.state_high = np.array(state_high) * np.ones(
-            self.env.unwrapped.state_space.shape, dtype=self.env.unwrapped.state_space.dtype
-        )
+        super().__init__(env, state_low, state_high)
         self.action_low = np.array(action_low, dtype=self.env.unwrapped.action_space.dtype)
         self.action_high = np.array(action_high, dtype=self.env.unwrapped.action_space.dtype)
         self.t_interval = max(self.env.unwrapped.dt, t_interval) if t_interval is not None else self.env.unwrapped.dt
