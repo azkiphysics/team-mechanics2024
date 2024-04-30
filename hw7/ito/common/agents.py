@@ -9,6 +9,7 @@ from torch.optim.lr_scheduler import LinearLR
 
 from .buffers import Buffer
 from .envs import Env
+from .policies import DQNPolicy, DDPGActor, DDPGCritic
 from .wrappers import (
     Wrapper,
     LQRMultiBodyEnvWrapper,
@@ -117,24 +118,9 @@ class DQNAgent(DRLAgent):
     ) -> None:
         self.env = env
 
-        n_observations = env.observation_space.shape[0]
-        n_actions = env.action_space.n
         self.device = self.get_device(device=device)
-        self.q_network = nn.Sequential(
-            nn.Linear(n_observations, 64),
-            nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU(),
-            nn.Linear(64, n_actions),
-        ).to(self.device)
-
-        self.target_q_network = nn.Sequential(
-            nn.Linear(n_observations, 64),
-            nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU(),
-            nn.Linear(64, n_actions),
-        ).to(self.device)
+        self.q_network = DQNPolicy(env.observation_space, env.action_space).to(self.device)
+        self.target_q_network = DQNPolicy(env.observation_space, env.action_space).to(self.device)
 
         if loaddir is not None:
             q_network_path = os.path.join(loaddir, "q_network.pt")
@@ -262,42 +248,13 @@ class DDPGAgent(DRLAgent):
         device: torch.device | str = "auto",
         loaddir: str | None = None,
     ) -> None:
-        self.env = env
-        n_observations = env.observation_space.shape[0]
-        n_actions = env.action_space.shape[0]
         self.device = self.get_device(device=device)
 
-        self.policy = nn.Sequential(
-            nn.Linear(n_observations, 400),
-            nn.ReLU(),
-            nn.Linear(400, 300),
-            nn.ReLU(),
-            nn.Linear(300, n_actions),
-            nn.Tanh(),
-        ).to(self.device)
-        self.target_policy = nn.Sequential(
-            nn.Linear(n_observations, 400),
-            nn.ReLU(),
-            nn.Linear(400, 300),
-            nn.ReLU(),
-            nn.Linear(300, n_actions),
-            nn.Tanh(),
-        ).to(self.device)
+        self.policy = DDPGActor(env.observation_space, env.action_space).to(self.device)
+        self.target_policy = DDPGActor(env.observation_space, env.action_space).to(self.device)
 
-        self.q_network = nn.Sequential(
-            nn.Linear(n_observations + n_actions, 400),
-            nn.ReLU(),
-            nn.Linear(400, 300),
-            nn.ReLU(),
-            nn.Linear(300, 1),
-        ).to(self.device)
-        self.target_q_network = nn.Sequential(
-            nn.Linear(n_observations + n_actions, 400),
-            nn.ReLU(),
-            nn.Linear(400, 300),
-            nn.ReLU(),
-            nn.Linear(300, 1),
-        ).to(self.device)
+        self.q_network = DDPGCritic(env.observation_space, env.action_space).to(self.device)
+        self.target_q_network = DDPGCritic(env.observation_space, env.action_space).to(self.device)
 
         if loaddir is not None:
             policy_path = os.path.join(loaddir, "policy.pt")
@@ -458,46 +415,14 @@ class TD3Agent(DDPGAgent):
         loaddir: str | None = None,
     ) -> None:
         self.env = env
-        n_observations = env.observation_space.shape[0]
-        n_actions = env.action_space.shape[0]
         self.device = self.get_device(device=device)
 
-        self.policy = nn.Sequential(
-            nn.Linear(n_observations, 400),
-            nn.ReLU(),
-            nn.Linear(400, 300),
-            nn.ReLU(),
-            nn.Linear(300, n_actions),
-            nn.Tanh(),
-        ).to(self.device)
-        self.target_policy = nn.Sequential(
-            nn.Linear(n_observations, 400),
-            nn.ReLU(),
-            nn.Linear(400, 300),
-            nn.ReLU(),
-            nn.Linear(300, n_actions),
-            nn.Tanh(),
-        ).to(self.device)
+        self.policy = DDPGActor(env.observation_space, env.action_space).to(self.device)
+        self.target_policy = DDPGActor(env.observation_space, env.action_space).to(self.device)
 
-        self.q_networks = tuple(
-            nn.Sequential(
-                nn.Linear(n_observations + n_actions, 400),
-                nn.ReLU(),
-                nn.Linear(400, 300),
-                nn.ReLU(),
-                nn.Linear(300, 1),
-            ).to(self.device)
-            for _ in range(2)
-        )
+        self.q_networks = tuple(DDPGCritic(env.observation_space, env.action_space).to(self.device) for _ in range(2))
         self.target_q_networks = tuple(
-            nn.Sequential(
-                nn.Linear(n_observations + n_actions, 400),
-                nn.ReLU(),
-                nn.Linear(400, 300),
-                nn.ReLU(),
-                nn.Linear(300, 1),
-            ).to(self.device)
-            for _ in range(2)
+            DDPGCritic(env.observation_space, env.action_space).to(self.device) for _ in range(2)
         )
         if loaddir is not None:
             policy_path = os.path.join(loaddir, "policy.pt")

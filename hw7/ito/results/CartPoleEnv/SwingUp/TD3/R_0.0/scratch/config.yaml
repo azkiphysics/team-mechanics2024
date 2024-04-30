@@ -5,10 +5,9 @@ agent:
     batch_size: 512
     critic_learning_rate: 0.001
     gamma: 0.999
-    loaddir: null
     policy_delay: 2
     target_noise: 0.2
-    target_noise_clip: 0.4
+    target_noise_clip: 0.3
     tau: 0.005
   name: TD3
   reset: {}
@@ -27,11 +26,11 @@ env:
   name: CartPoleEnv
   reset:
     Q:
-    - 0.6
-    - 1.0
-    - 0.01
-    - 0.01
-    Qf: 0.5
+    - 0.2
+    - 0.8
+    - 0.2
+    - 0.2
+    Qf: 0.4
     R: 0.0
     initial_t: 0.0
     initial_x:
@@ -80,8 +79,8 @@ runner:
   name: Runner
   reset: {}
   run:
-    learning_starts: 1000
-    total_timesteps: 20000
+    learning_starts: 5000
+    total_timesteps: 40000
     trainfreq: 1
   save:
-    savedir: results/CartPoleEnv/SwingUp/TD3
+    savedir: results/CartPoleEnv/SwingUp/TD3/R_0.0/scratch

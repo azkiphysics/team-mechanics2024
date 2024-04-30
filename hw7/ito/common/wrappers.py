@@ -86,16 +86,16 @@ class MultiBodyEnvWrapper(Wrapper):
     ) -> None:
         super().__init__(env)
         self.state_low = np.array(state_low) * np.ones(
-            self.env.unwrapped.state_space.shape, dtype=self.env.unwrapped.state_space.dtype
+            self.unwrapped.state_space.shape, dtype=self.unwrapped.state_space.dtype
         )
         self.state_high = np.array(state_high) * np.ones(
-            self.env.unwrapped.state_space.shape, dtype=self.env.unwrapped.state_space.dtype
+            self.unwrapped.state_space.shape, dtype=self.unwrapped.state_space.dtype
         )
 
         self.target_x: np.ndarray = None
 
     def get_state(self, x: np.ndarray) -> np.ndarray:
-        state_indices = self.env.unwrapped.get_state_indices()
+        state_indices = self.unwrapped.get_state_indices()
         state = x[state_indices]
         target_state = self.target_x[state_indices]
         return (state - target_state).astype(self.state_space.dtype)
