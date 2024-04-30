@@ -25,8 +25,8 @@ env:
     initial_x:
     - 0.0
     - 0.0
-    - 1.0
-    - 1.8707963267948966
+    - -1.0
+    - -1.5707963267948966
     - 0.0
     - 0.0
     - 0.0
@@ -43,20 +43,20 @@ env:
   wrappers:
   - init:
       state_high:
-      - 3.5
       - 10.0
       - 10.0
-      - 10.0
+      - 100.0
+      - 100.0
       state_low:
-      - -3.5
       - -10.0
       - -10.0
-      - -10.0
+      - -100.0
+      - -100.0
     name: LQRMultiBody
 runner:
   evaluate:
     moviefreq: 1
-    renderfreq: 100
+    renderfreq: 1
   init: {}
   name: Runner
   reset: {}
@@ -65,4 +65,4 @@ runner:
     total_timesteps: 0
     trainfreq: 1
   save:
-    savedir: results/CartPoleEnv/Balance/LQR
+    savedir: results/CartPoleEnv/SwingUp/LQR

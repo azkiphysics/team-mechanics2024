@@ -31,7 +31,17 @@ env:
     R: 1.0
   wrappers:
     - name: LQRMultiBody
-      init: {}
+      init:
+        state_low:
+          - -3.5
+          - -10.0
+          - -10.0
+          - -10.0
+        state_high:
+          - 3.5
+          - 10.0
+          - 10.0
+          - 10.0
 agent:
   name: LQR
   init: {}

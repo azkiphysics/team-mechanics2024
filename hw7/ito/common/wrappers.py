@@ -81,8 +81,16 @@ class Wrapper(object):
 
 
 class MultiBodyEnvWrapper(Wrapper):
-    def __init__(self, env: MultiBodyEnv) -> None:
-        self.env = env
+    def __init__(
+        self, env: MultiBodyEnv, state_low: float | list | np.ndarray, state_high: float | list | np.ndarray
+    ) -> None:
+        super().__init__(env)
+        self.state_low = np.array(state_low) * np.ones(
+            self.env.unwrapped.state_space.shape, dtype=self.env.unwrapped.state_space.dtype
+        )
+        self.state_high = np.array(state_high) * np.ones(
+            self.env.unwrapped.state_space.shape, dtype=self.env.unwrapped.state_space.dtype
+        )
 
         self.target_x: np.ndarray = None
 
@@ -94,6 +102,12 @@ class MultiBodyEnvWrapper(Wrapper):
 
     def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
         return self.get_state(x).astype(self.observation_space.dtype)
+
+    def get_truncated(self, t: float, x: np.ndarray, u: np.ndarray) -> bool:
+        truncated = super().get_truncated(t, x, u)
+        s = self.get_state(x)
+        truncated |= np.sum(s < self.state_low) > 0 or np.sum(s > self.state_high) > 0
+        return truncated
 
     def reset(
         self,
@@ -113,7 +127,7 @@ class MultiBodyEnvWrapper(Wrapper):
         self.R = R * np.identity(n_us, dtype=np.float64)
         initial_x = np.array(initial_x, dtype=np.float64)
         target_x = np.array(target_x, dtype=np.float64)
-        self.target_x = self.env.unwrapped.newton_raphson_method(initial_t, target_x)
+        self.target_x = self.unwrapped.newton_raphson_method(initial_t, target_x)
         return super().reset(initial_t=initial_t, initial_x=initial_x, integral_method=integral_method, **kwargs)
 
     @property
@@ -122,19 +136,21 @@ class MultiBodyEnvWrapper(Wrapper):
 
 
 class LQRMultiBodyEnvWrapper(MultiBodyEnvWrapper):
-    def __init__(self, env: MultiBodyEnv) -> None:
-        super().__init__(env)
+    def __init__(
+        self, env: MultiBodyEnv, state_low: float | list | np.ndarray, state_high: float | list | np.ndarray
+    ) -> None:
+        super().__init__(env, state_low, state_high)
 
         self.Q: np.ndarray = None
         self.R: np.ndarray = None
 
     def compute_ddqi(self, t: float, x: np.ndarray, u: np.ndarray):
-        pos_indices = self.env.unwrapped.get_coordinate_indices()
-        independent_pos_indices = self.env.unwrapped.get_independent_coordinate_indices()
-        dependent_pos_indices = self.env.unwrapped.get_dependent_coordinate_indices()
+        pos_indices = self.unwrapped.get_coordinate_indices()
+        independent_pos_indices = self.unwrapped.get_independent_coordinate_indices()
+        dependent_pos_indices = self.unwrapped.get_dependent_coordinate_indices()
 
         # Biの計算
-        Cq = self.env.unwrapped.compute_Cq(t, x)
+        Cq = self.unwrapped.compute_Cq(t, x)
         Cqi = Cq[:, independent_pos_indices]
         Cqd = Cq[:, dependent_pos_indices]
         Cdi = -np.linalg.inv(Cqd) @ Cqi
@@ -143,8 +159,8 @@ class LQRMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         Bi[dependent_pos_indices] = Cdi
 
         # ddqの計算
-        M = self.env.unwrapped.compute_mass_matrix(t, x)[: len(pos_indices), : len(pos_indices)]
-        Q = self.env.unwrapped.compute_external_force(t, x, u)
+        M = self.unwrapped.compute_mass_matrix(t, x)[: len(pos_indices), : len(pos_indices)]
+        Q = self.unwrapped.compute_external_force(t, x, u)
         Qe = Q[: len(pos_indices)]
         Qd = Q[len(pos_indices) :]
         Cd = np.linalg.inv(Cqd) @ Qd
@@ -155,7 +171,7 @@ class LQRMultiBodyEnvWrapper(MultiBodyEnvWrapper):
     @property
     def A(self) -> np.ndarray:
         assert self.env.unwrapped.initial_t is not None and self.target_x is not None
-        state_indices = self.env.unwrapped.get_state_indices()
+        state_indices = self.unwrapped.get_state_indices()
         n_states = len(state_indices)
         A = np.zeros((n_states, n_states), dtype=np.float64)
         A[: n_states // 2, n_states // 2 :] = np.identity(n_states // 2)
@@ -176,7 +192,7 @@ class LQRMultiBodyEnvWrapper(MultiBodyEnvWrapper):
     @property
     def B(self) -> np.ndarray:
         assert self.env.unwrapped.initial_t is not None and self.target_x is not None
-        state_indices = self.env.unwrapped.get_state_indices()
+        state_indices = self.unwrapped.get_state_indices()
         n_states = len(state_indices)
         n_us = self.env.unwrapped.u_space.shape[0]
         B = np.zeros((n_states, n_us), dtype=np.float64)
@@ -246,12 +262,6 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         if truncated:
             reward += 25.0 * np.exp(-0.5 * s @ self.Qf @ s)
         return reward
-
-    def get_truncated(self, t: float, x: np.ndarray, u: np.ndarray) -> bool:
-        truncated = super().get_truncated(t, x, u)
-        s = self.get_state(x)
-        truncated |= np.sum(s < self.state_low) > 0 or np.sum(s > self.state_high) > 0
-        return truncated
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray | float | bool | Dict[str, bool | float | np.ndarray]]:
         t_end = self.unwrapped.t + self.t_interval
