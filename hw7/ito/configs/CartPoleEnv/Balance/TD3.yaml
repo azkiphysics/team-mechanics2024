@@ -1,0 +1,86 @@
+env:
+  name: CartPoleEnv
+  init:
+    t_max: 15.0
+    dt: 0.02
+    m_cart: 1.0
+    m_ball: 1.0
+    l_pole: 1.0
+  reset:
+    initial_t: 0.0
+    initial_x:
+      - 0.0
+      - 0.0
+      - 1.0
+      - 1.8707963267948966
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+    target_x:
+      - 1.0
+      - 0.0
+      - 1.0
+      - 1.5707963267948966
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+    Q: 2.0
+    Qf: 2.0
+    R: 0.0
+    w_state: 1.0
+    w_final: 10.0
+    w_base: 0.2
+  wrappers:
+    - name: ContinuousRLMultiBody
+      init:
+        state_low:
+          - -3.5
+          - -0.8
+          - -5.0
+          - -5.0
+        state_high:
+          - 3.5
+          - 0.8
+          - 5.0
+          - 5.0
+        action_low:
+          - -25.0
+        action_high:
+          - 25.0
+        t_interval: 0.1
+    - name: RLTimeObservation
+      init: {}
+agent:
+  name: TD3
+  init:
+    actor_learning_rate: 1.0e-3
+    critic_learning_rate: 1.0e-3
+    gamma: 0.999
+    batch_size: 512
+    tau: 0.005
+    action_noise: 0.1
+    target_noise: 0.1
+    target_noise_clip: 0.12
+    policy_delay: 2
+    # loaddir: results/CartPoleEnv/Balance/TD3/scratch/agent
+  reset: {}
+buffer:
+  name: Buffer
+  init:
+    maxlen: 500000
+  reset: {}
+runner:
+  name: Runner
+  init: {}
+  reset: {}
+  run:
+    total_timesteps: 40000
+    learning_starts: 1000
+    trainfreq: 1
+  evaluate:
+    moviefreq: 1
+    renderfreq: 1
+  save:
+    savedir: results/CartPoleEnv/Balance/TD3/scratch

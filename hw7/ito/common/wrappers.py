@@ -246,15 +246,17 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         self.action_high = np.array(action_high, dtype=self.env.unwrapped.action_space.dtype)
         self.t_interval = max(self.env.unwrapped.dt, t_interval) if t_interval is not None else self.env.unwrapped.dt
 
+        self.w_state: float = None
+        self.w_final: float = None
         self.ts: List[float] = None
         self.xs: List[np.ndarray] = None
 
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
         s = self.get_state(x)
         truncated = self.unwrapped.get_truncated(t, x, u)
-        reward = 0.1 + np.exp(-0.5 * s @ self.Q @ s) - 0.5 * u @ self.R @ u
+        reward = self.w_base + self.w_state * np.exp(-0.5 * s @ self.Q @ s) - 0.5 * u @ self.R @ u
         if truncated:
-            reward += 25.0 * np.exp(-0.5 * s @ self.Qf @ s)
+            reward += self.w_final * np.exp(-0.5 * s @ self.Qf @ s)
         return reward
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray | float | bool | Dict[str, bool | float | np.ndarray]]:
@@ -276,9 +278,15 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         Qf: float | np.ndarray,
         R: float | np.ndarray,
         integral_method: str = "runge_kutta_method",
+        w_state: float = 1.0,
+        w_final: float = 25.0,
+        w_base: float = 0.1,
         **kwargs,
     ) -> Tuple[np.ndarray | Dict[str, bool | float | np.ndarray]]:
         obs, info = super().reset(initial_t, initial_x, target_x, Q, Qf, R, integral_method, **kwargs)
+        self.w_state = w_state
+        self.w_final = w_final
+        self.w_base = w_base
         self.ts = [self.unwrapped.t]
         self.xs = [self.unwrapped.x.copy()]
         return obs, info
