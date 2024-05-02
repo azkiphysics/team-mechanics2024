@@ -10,7 +10,7 @@ from common.utils import FigureMaker
 
 
 if __name__ == "__main__":
-    config_path = os.path.join("configs", "CartPoleEnv", "TD3.yaml")
+    config_path = os.path.join("configs", "CartPoleEnv", "Balance", "TD3.yaml")
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
@@ -34,6 +34,8 @@ if __name__ == "__main__":
         agent_config["init"]["action_noise"] *= 0.1
         agent_config["init"]["target_noise"] *= 0.1
         agent_config["init"]["target_noise_clip"] *= 0.1
+        agent_config["init"]["actor_learning_rate"] *= 0.1
+        agent_config["init"]["critic_learning_rate"] *= 0.1
 
     # バッファの設定
     buffer_config = {
@@ -48,7 +50,7 @@ if __name__ == "__main__":
     # パレート最適解集合の計算
     sse_states = []
     sse_us = []
-    for R in tqdm(np.linspace(0.0, 0.1, 11)):  # Swing upの場合は最大値を0.01に設定
+    for R in tqdm(np.linspace(0.0, 0.2, 11)):  # Swing upの場合は最大値を0.01に設定
         # Q, Rの設定
         env_config["reset"]["R"] = R
 

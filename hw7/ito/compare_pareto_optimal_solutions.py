@@ -21,24 +21,17 @@ plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
 
 
 if __name__ == "__main__":
-    savedir = os.path.join("results", "CartPoleEnv")
-    max_actions = [10.0, 15.0, 25.0]
-    subdirs = [
-        "LQR",
-        *[os.path.join("TD3", f"action_{idx}") for idx in max_actions],
-    ]
+    savedir = os.path.join("results", "CartPoleEnv", "Balance")
+    subdirs = ["LQR", "TD3/scratch"]
     savepaths = [
         os.path.join(savedir, subdir, "pareto_optimal_solutions", "sum_square_errors.pickle") for subdir in subdirs
     ]
+    labels = ["LQR", "TD3"]
 
     figure_maker = FigureMaker()
     figure_maker.reset()
     for idx, savepath in enumerate(savepaths):
         with open(savepath, "rb") as f:
-            if idx == 0:
-                label = "LQR"
-            else:
-                label = "RL (maximum of $\\boldsymbol{u}$: " + f"{max_actions[idx - 1]})"
             data = pickle.load(f)
             figure_data = {
                 "x": {
@@ -48,7 +41,7 @@ if __name__ == "__main__":
                 },
                 "y": {
                     "label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{u}^T\\boldsymbol{u}dt$",
-                    "value": [{"label": label, "value": data["u"]}],
+                    "value": [{"label": labels[idx], "value": data["u"]}],
                 },
             }
             figure_maker.make(figure_data, draw_type="scatter")
