@@ -2,9 +2,7 @@ import os
 import pickle
 
 import matplotlib.pyplot as plt
-
 from common.utils import FigureMaker
-
 
 # Matplotlibで綺麗な論文用のグラフを作る
 # https://qiita.com/MENDY/items/fe9b0c50383d8b2fd919

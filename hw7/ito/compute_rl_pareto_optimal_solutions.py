@@ -1,16 +1,14 @@
 import os
 import pickle
-import yaml
 
 import numpy as np
+import yaml
+from answer1 import AGENTS, BUFFERS, ENVS, WRAPPERS, Runner
+from common.utils import FigureMaker
 from tqdm import tqdm
 
-from answer1 import Runner, AGENTS, BUFFERS, ENVS, WRAPPERS
-from common.utils import FigureMaker
-
-
 if __name__ == "__main__":
-    config_path = os.path.join("configs", "CartPoleEnv", "Balance", "TD3.yaml")
+    config_path = os.path.join("configs", "CartPoleEnv", "SwingUp", "TD3.yaml")
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
@@ -50,7 +48,7 @@ if __name__ == "__main__":
     # パレート最適解集合の計算
     sse_states = []
     sse_us = []
-    for R in tqdm(np.linspace(0.0, 0.2, 11)):  # Swing upの場合は最大値を0.01に設定
+    for R in tqdm(np.linspace(0.0, 0.005, 11)):  # Swing upの場合は最大値を0.01に設定
         # Q, Rの設定
         env_config["reset"]["R"] = R
 

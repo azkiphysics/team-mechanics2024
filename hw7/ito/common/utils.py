@@ -4,8 +4,8 @@ from typing import Dict, List, Literal, Sequence
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.figure import Figure
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 
 class Box(object):

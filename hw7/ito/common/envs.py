@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.figure import Figure
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from .utils import Box
 

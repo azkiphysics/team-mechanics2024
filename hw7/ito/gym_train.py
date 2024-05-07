@@ -1,18 +1,17 @@
 import argparse
 import logging
-from logging import getLogger, Formatter, StreamHandler
+from logging import Formatter, StreamHandler, getLogger
 from typing import Dict, List
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-from tqdm import trange
-from tqdm.contrib.logging import logging_redirect_tqdm
-
-from common.agents import Agent, DQNAgent, DDPGAgent, TD3Agent
+from common.agents import Agent, DDPGAgent, DQNAgent, TD3Agent
 from common.buffers import Buffer
 from common.utils import FigureMaker, MovieMaker
+from tqdm import trange
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 # ロガーの設定
 logger = getLogger(__name__)

@@ -1,17 +1,15 @@
 import os
 import pickle
-import yaml
 
 import numpy as np
-from tqdm import tqdm
-
+import yaml
 from answer1 import Runner
 from common.agents import LQRAgent
 from common.buffers import Buffer
 from common.envs import CartPoleEnv
 from common.utils import FigureMaker
 from common.wrappers import LQRMultiBodyEnvWrapper
-
+from tqdm import tqdm
 
 if __name__ == "__main__":
     config_path = os.path.join("configs", "CartPoleEnv", "LQR.yaml")

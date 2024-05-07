@@ -2,26 +2,25 @@ import argparse
 import logging
 import os
 import pickle
-from logging import getLogger, Formatter, StreamHandler
+from logging import Formatter, StreamHandler, getLogger
 from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-from tqdm import trange
-from tqdm.contrib.logging import logging_redirect_tqdm
-
-from common.agents import Agent, DQNAgent, DDPGAgent, LQRAgent, TD3Agent
+from common.agents import Agent, DDPGAgent, DQNAgent, LQRAgent, TD3Agent
 from common.buffers import Buffer
-from common.envs import Env, CartPoleEnv
+from common.envs import CartPoleEnv, Env
 from common.utils import FigureMaker, MovieMaker
 from common.wrappers import (
-    DQNMultiBodyEnvWrapper,
     ContinuousRLMultiBodyEnvWrapper,
+    DQNMultiBodyEnvWrapper,
     LQRMultiBodyEnvWrapper,
     RLCartPoleObservationWrapper,
     RLTimeObservationWrapper,
 )
+from tqdm import trange
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 # ロガーの設定
 logger = getLogger(__name__)

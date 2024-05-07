@@ -1,9 +1,7 @@
 import pickle
 
 import numpy as np
-
 from common.utils import FigureMaker
-
 
 savedir = "results\\CartPoleEnv\\TD3\\run"
 path = savedir + "\\training_data.pickle"

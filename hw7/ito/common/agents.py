@@ -9,13 +9,8 @@ from torch.optim.lr_scheduler import LinearLR
 
 from .buffers import Buffer
 from .envs import Env
-from .policies import DQNPolicy, DDPGActor, DDPGCritic
-from .wrappers import (
-    Wrapper,
-    LQRMultiBodyEnvWrapper,
-    DQNMultiBodyEnvWrapper,
-    ContinuousRLMultiBodyEnvWrapper,
-)
+from .policies import DDPGActor, DDPGCritic, DQNPolicy
+from .wrappers import ContinuousRLMultiBodyEnvWrapper, DQNMultiBodyEnvWrapper, LQRMultiBodyEnvWrapper, Wrapper
 
 
 class Agent(object):
@@ -248,8 +243,9 @@ class DDPGAgent(DRLAgent):
         device: torch.device | str = "auto",
         loaddir: str | None = None,
     ) -> None:
-        self.device = self.get_device(device=device)
+        self.env = env
 
+        self.device = self.get_device(device=device)
         self.policy = DDPGActor(env.observation_space, env.action_space).to(self.device)
         self.target_policy = DDPGActor(env.observation_space, env.action_space).to(self.device)
 
