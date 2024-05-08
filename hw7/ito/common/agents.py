@@ -10,7 +10,12 @@ from torch.optim.lr_scheduler import LinearLR
 from .buffers import Buffer
 from .envs import Env
 from .policies import DDPGActor, DDPGCritic, DQNPolicy
-from .wrappers import ContinuousRLMultiBodyEnvWrapper, DQNMultiBodyEnvWrapper, LQRMultiBodyEnvWrapper, Wrapper
+from .wrappers import (
+    ContinuousRLMultiBodyEnvWrapper,
+    DQNMultiBodyEnvWrapper,
+    LQRMultiBodyEnvWrapper,
+    Wrapper,
+)
 
 
 class Agent(object):
