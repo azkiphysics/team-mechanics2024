@@ -109,12 +109,13 @@ class Runner(object):
                     self.run_result.push({"episode": k_episodes, "total_rewards": total_rewards})
                     total_rewards = 0.0
                     obs, _ = self.env.reset(**self.env_config["reset"])
-                obs = next_obs.copy()
+                else:
+                    obs = next_obs.copy()
 
     def evaluate(self, is_render: bool = True, moviefreq: int = 1, renderfreq: int = 1):
         # シミュレーションの実行
         obs, info = self.env.reset(**self.env_config["reset"])
-        self.agent.reset(**self.agent_config["reset"], is_evaluate=True)
+        self.agent.evaluate_mode(True)
         done = False
         self.evaluate_result.reset()
         self.evaluate_result.push(info)
@@ -141,6 +142,7 @@ class Runner(object):
             if done:
                 break
             obs = next_obs.copy()
+        self.agent.evaluate_mode(False)
 
     def save(self, savedir: str):
         self.agent.save(savedir)

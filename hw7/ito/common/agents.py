@@ -21,6 +21,7 @@ from .wrappers import (
 class Agent(object):
     def __init__(self, env: Env | Wrapper) -> None:
         self.env = env
+        self.is_evaluate: bool = False
 
     def reset(self, **kwargs):
         pass
@@ -33,6 +34,9 @@ class Agent(object):
 
     def save(self, savedir: str):
         pass
+
+    def evaluate_mode(self, is_evaluate: bool):
+        self.is_evaluate = is_evaluate
 
 
 class ZeroAgent(Agent):
@@ -117,6 +121,7 @@ class DQNAgent(DRLAgent):
         loaddir: str | None = None,
     ) -> None:
         self.env = env
+        self.is_evaluate: bool = False
 
         self.device = self.get_device(device=device)
         self.q_network = DQNPolicy(env.observation_space, env.action_space).to(self.device)
@@ -146,15 +151,13 @@ class DQNAgent(DRLAgent):
         self.max_grad_norm = max_grad_norm
 
         self.k_timesteps: int = None
-        self.is_evaluate: bool = None
         self.k_trains: int = None
         self.k_decay: int = None
 
-    def reset(self, is_evaluate: bool = False, **kwargs):
+    def reset(self, **kwargs):
         self.k_timesteps = 0
         self.k_decay = 0
         self.k_trains = 0
-        self.is_evaluate = is_evaluate
 
     def act(self, obs: np.ndarray) -> np.int64:
         self.k_timesteps += 1
@@ -288,10 +291,7 @@ class DDPGAgent(DRLAgent):
         self.tau = tau
         self.action_noise = action_noise
 
-        self.is_evaluate: bool = None
-
-    def reset(self, is_evaluate: bool = False, **kwargs):
-        self.is_evaluate = is_evaluate
+        self.is_evaluate: bool = False
 
     def act(self, obs: np.ndarray):
         obs_pt = torch.tensor(
@@ -464,11 +464,10 @@ class TD3Agent(DDPGAgent):
         self.target_noise_clip = target_noise_clip
         self.policy_delay = policy_delay
 
-        self.is_evaluate: bool = None
+        self.is_evaluate: bool = False
         self._n_update: int = None
 
-    def reset(self, is_evaluate: bool = False, **kwargs):
-        self.is_evaluate = is_evaluate
+    def reset(self, **kwargs):
         self._n_update = 0
 
     def train(self, buffer: Buffer, **kwargs):

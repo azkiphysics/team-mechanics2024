@@ -4,7 +4,7 @@ agent:
     actor_learning_rate: 0.001
     batch_size: 512
     critic_learning_rate: 0.001
-    gamma: 0.999
+    gamma: 0.9999
     policy_delay: 2
     target_noise: 0.1
     target_noise_clip: 0.12
@@ -25,9 +25,9 @@ env:
     t_max: 15.0
   name: CartPoleEnv
   reset:
-    Q: 2.0
-    Qf: 2.0
-    R: 0.0
+    Q: 1.0
+    Qf: 1.0
+    R: 0.001
     initial_t: 0.0
     initial_x:
     - 0.0
@@ -48,7 +48,7 @@ env:
     - 0.0
     - 0.0
     w_base: 0.2
-    w_final: 40.0
+    w_final: 1.0
     w_state: 1.0
   wrappers:
   - init:
@@ -79,7 +79,7 @@ runner:
   reset: {}
   run:
     learning_starts: 1000
-    total_timesteps: 50000
+    total_timesteps: 40000
     trainfreq: 1
   save:
-    savedir: results/CartPoleEnv/Balance/TD3/scratch
+    savedir: results/CartPoleEnv/Balance/TD3/scratch/R_0.001
