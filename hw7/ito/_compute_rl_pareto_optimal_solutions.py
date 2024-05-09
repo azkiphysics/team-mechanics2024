@@ -1,3 +1,4 @@
+import glob
 import os
 import pickle
 
@@ -9,18 +10,17 @@ from answer1 import AGENTS, BUFFERS, ENVS, WRAPPERS, Runner
 from common.utils import FigureMaker
 
 if __name__ == "__main__":
-    config_path = os.path.join("configs", "CartPoleEnv", "Balance", "TD3.yaml")
-    with open(config_path) as f:
-        config = yaml.safe_load(f)
-
-    Qs = np.linspace(0.1, 1.0, 10)
-    Rs = np.linspace(0.0, 1.0, 11)
-    Qs, Rs = [val.reshape(-1) for val in np.meshgrid(Qs, Rs)]
+    _savedir = os.path.join("results", "CartPoleEnv", "Balance", "TD3", "scratch")
+    savedirs = glob.glob(os.path.join(_savedir, "Q_*_R_*_Qf_*"))
 
     # パレート最適解集合の計算
     sse_states = []
     sse_us = []
-    for Q, R in tqdm(zip(Qs, Rs), leave=False):
+    for savedir in tqdm(savedirs):
+        config_path = os.path.join(savedir, "config.yaml")
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
         # 環境の設定
         env_config = {
             "class": ENVS[config["env"]["name"]],
@@ -30,14 +30,12 @@ if __name__ == "__main__":
             "init": config["env"]["init"],
             "reset": config["env"]["reset"],
         }
-        env_config["reset"]["Q"] = Q
-        env_config["reset"]["R"] = R
-        env_config["reset"]["w_base"] = R * 20.0 if np.abs(R) > 1e-11 else 2.5
 
         # エージェントの設定
+        loaddir = os.path.join(savedir, "agent")
         agent_config = {
             "class": AGENTS[config["agent"]["name"]],
-            "init": config["agent"]["init"],
+            "init": config["agent"]["init"] | {"loaddir": loaddir},
             "reset": config["agent"]["reset"],
         }
 
@@ -49,23 +47,14 @@ if __name__ == "__main__":
         }
 
         # Runnerの設定
-        runner_config = config["runner"]
-        runner_config["evaluate"]["is_render"] = False
-        Qf = env_config["reset"]["Qf"]
-        runner_config["save"]["savedir"] = os.path.join(
-            "configs", "CartPoleEnv", "Balance", "TD3", "scratch", f"Q_{Q}_R_{R}_Qf_{Qf}"
-        )
+        config["runner"]["evaluate"]["is_render"] = False
 
         # Runnerの設定
-        runner = Runner(env_config, agent_config, buffer_config, **runner_config["init"])
-        runner.reset(**runner_config["reset"])
-
-        # Runnerの実行
-        runner.run(**runner_config["run"])
-        runner.save(**runner_config["save"])
+        runner = Runner(env_config, agent_config, buffer_config, **config["runner"]["init"])
+        runner.reset(**config["runner"]["reset"])
 
         # パレート最適解の計算
-        runner.evaluate(**runner_config["evaluate"])
+        runner.evaluate(**config["runner"]["evaluate"])
         t_interval = runner.evaluate_result.get()["t"][1] - runner.evaluate_result.get()["t"][0]
         states = np.array(runner.evaluate_result.get()["s"], dtype=np.float64)
         us = np.array(runner.evaluate_result.get()["u"], dtype=np.float64)
@@ -82,7 +71,7 @@ if __name__ == "__main__":
     sse_us = np.array(sse_us, dtype=np.float64)
 
     # データの保存
-    savedir = os.path.join("configs", "CartPoleEnv", "Balance", "TD3", "scratch", "pareto_optimal_solutions")
+    savedir = os.path.join(_savedir, "pareto_optimal_solutions")
     os.makedirs(savedir, exist_ok=True)
     with open(os.path.join(savedir, "sum_square_errors.pickle"), "wb") as f:
         pickle.dump({"s": sse_states, "u": sse_us}, f)
