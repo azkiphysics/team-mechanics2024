@@ -104,11 +104,11 @@ class MultiBodyEnvWrapper(Wrapper):
     def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
         return self.get_state(x).astype(self.observation_space.dtype)
 
-    def get_truncated(self, t: float, x: np.ndarray, u: np.ndarray) -> bool:
-        truncated = super().get_truncated(t, x, u)
+    def get_terminated(self, t: float, x: np.ndarray, u: np.ndarray) -> bool:
+        terminated = super().get_terminated(t, x, u)
         s = self.get_state(x)
-        truncated |= np.sum(s < self.state_low) > 0 or np.sum(s > self.state_high) > 0
-        return truncated
+        terminated |= np.sum(s < self.state_low) > 0 or np.sum(s > self.state_high) > 0
+        return terminated
 
     def reset(
         self,

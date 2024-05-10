@@ -85,14 +85,13 @@ class Runner(object):
             for k_timesteps in trange(total_timesteps, leave=False):
                 action = self.agent.act(obs)
                 next_obs, reward, terminated, truncated, _ = self.env.step(action)
-                done = terminated or truncated
                 self.buffer.push(
                     {
                         "obs": obs.copy(),
                         "next_obs": next_obs.copy(),
                         "action": action.copy(),
                         "reward": reward,
-                        "done": done,
+                        "done": terminated,
                     }
                 )
                 total_rewards += reward
@@ -103,7 +102,7 @@ class Runner(object):
                     and k_timesteps % trainfreq == 0
                 ):
                     self.agent.train(buffer=self.buffer)
-                if done:
+                if terminated or truncated:
                     k_episodes += 1
                     logger.info(f"episode: {k_episodes}/ total_rewards: {total_rewards}")
                     self.run_result.push({"episode": k_episodes, "total_rewards": total_rewards})
