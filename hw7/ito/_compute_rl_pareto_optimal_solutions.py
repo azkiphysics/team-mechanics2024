@@ -10,14 +10,14 @@ from answer1 import AGENTS, BUFFERS, ENVS, WRAPPERS, Runner
 from common.utils import FigureMaker
 
 if __name__ == "__main__":
-    _savedir = os.path.join("results", "CartPoleEnv", "Balance", "TD3", "scratch")
+    _savedir = os.path.join("results", "CartPoleEnv", "Balance", "TD3", "scratch", "pareto_optimal_solutions")
     savedirs = glob.glob(os.path.join(_savedir, "Q_*_R_*_Qf_*"))
 
     # パレート最適解集合の計算
     sse_states = []
     sse_us = []
     for savedir in tqdm(savedirs):
-        config_path = os.path.join(savedir, "config.yaml")
+        config_path = os.path.join("configs", "CartPoleEnv", "Balance", "TD3.yaml")
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
@@ -69,6 +69,8 @@ if __name__ == "__main__":
         runner.close()
     sse_states = np.array(sse_states, dtype=np.float64)
     sse_us = np.array(sse_us, dtype=np.float64)
+    print(savedirs[np.argmin(sse_states)], np.min(sse_states))
+    print(savedirs[np.argmin(sse_us)], np.min(sse_us))
 
     # データの保存
     savedir = os.path.join(_savedir, "pareto_optimal_solutions")

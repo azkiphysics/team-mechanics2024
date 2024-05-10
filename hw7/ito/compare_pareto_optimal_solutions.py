@@ -2,6 +2,7 @@ import os
 import pickle
 
 import matplotlib.pyplot as plt
+
 from common.utils import FigureMaker
 
 # Matplotlibで綺麗な論文用のグラフを作る
@@ -20,7 +21,7 @@ plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
 
 if __name__ == "__main__":
     savedir = os.path.join("results", "CartPoleEnv", "Balance")
-    subdirs = ["LQR", "TD3/scratch"]
+    subdirs = ["LQR", "TD3/scratch/pareto_optimal_solutions"]
     savepaths = [
         os.path.join(savedir, subdir, "pareto_optimal_solutions", "sum_square_errors.pickle") for subdir in subdirs
     ]

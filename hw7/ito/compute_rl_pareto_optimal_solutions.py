@@ -53,7 +53,7 @@ if __name__ == "__main__":
         runner_config["evaluate"]["is_render"] = False
         Qf = env_config["reset"]["Qf"]
         runner_config["save"]["savedir"] = os.path.join(
-            "configs", "CartPoleEnv", "Balance", "TD3", "scratch", "pareto_optimal_solutions", f"Q_{Q}_R_{R}_Qf_{Qf}"
+            "results", "CartPoleEnv", "Balance", "TD3", "scratch", "pareto_optimal_solutions", f"Q_{Q}_R_{R}_Qf_{Qf}"
         )
 
         # Runnerの設定

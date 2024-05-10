@@ -3,16 +3,17 @@ import pickle
 
 import numpy as np
 import yaml
+from tqdm import tqdm
+
 from answer1 import Runner
 from common.agents import LQRAgent
 from common.buffers import Buffer
 from common.envs import CartPoleEnv
 from common.utils import FigureMaker
 from common.wrappers import LQRMultiBodyEnvWrapper
-from tqdm import tqdm
 
 if __name__ == "__main__":
-    config_path = os.path.join("configs", "CartPoleEnv", "LQR.yaml")
+    config_path = os.path.join("configs", "CartPoleEnv", "Balance", "LQR.yaml")
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
@@ -49,13 +50,15 @@ if __name__ == "__main__":
     runner_config["evaluate"]["is_render"] = False
 
     # パレート最適解集合の計算
+    Q = np.linspace(0.0, 10.0, 11)[1:]
+    R = np.linspace(0.0, 10.0, 11)[1:]
     sse_states = []
     sse_us = []
-    for R in tqdm(np.linspace(0.0, 10.0, 101)[1:]):
+    for Q, R in tqdm(zip(*[val.reshape(-1) for val in np.meshgrid(Q, R)])):
         # Q, Rの設定
-        env_config["reset"]["Q"] = 1.0
+        env_config["reset"]["Q"] = Q
         env_config["reset"]["R"] = R
-        agent_config["reset"]["Q"] = 1.0
+        agent_config["reset"]["Q"] = Q
         agent_config["reset"]["R"] = R
 
         # Runnerの設定
