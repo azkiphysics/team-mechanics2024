@@ -24,11 +24,15 @@ from common.wrappers import (
 )
 
 # ロガーの設定
+if __name__ == "__main__":
+    logger_level = logging.INFO
+else:
+    logger_level = logging.WARNING
 logger = getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logger_level)
 handler_format = Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 handler = StreamHandler()
-handler.setLevel(logging.DEBUG)
+handler.setLevel(logger_level)
 handler.setFormatter(handler_format)
 logger.addHandler(handler)
 
