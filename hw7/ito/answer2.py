@@ -9,7 +9,7 @@ from answer1 import Runner
 from common.agents import LQRAgent
 from common.buffers import Buffer
 from common.envs import CartPoleEnv
-from common.utils import FigureMaker
+from common.utils import FigureMaker3d
 from common.wrappers import LQRMultiBodyEnvWrapper
 
 if __name__ == "__main__":
@@ -50,11 +50,12 @@ if __name__ == "__main__":
     runner_config["evaluate"]["is_render"] = False
 
     # パレート最適解集合の計算
-    Q = np.linspace(0.0, 10.0, 11)[1:]
-    R = np.linspace(0.0, 10.0, 11)[1:]
+    Q = np.linspace(0.0, 10.0, 6)[1:]
+    R = np.linspace(0.0, 10.0, 6)[1:]
     sse_states = []
     sse_us = []
-    for Q, R in tqdm(zip(*[val.reshape(-1) for val in np.meshgrid(Q, R)])):
+    sse_final_states = []
+    for Q, R in tqdm(zip(*[val.reshape(-1) for val in np.meshgrid(Q, R)]), total=25):
         # Q, Rの設定
         env_config["reset"]["Q"] = Q
         env_config["reset"]["R"] = R
@@ -70,34 +71,37 @@ if __name__ == "__main__":
         t_interval = runner.evaluate_result.get()["t"][1] - runner.evaluate_result.get()["t"][0]
         states = np.array(runner.evaluate_result.get()["s"], dtype=np.float64)
         us = np.array(runner.evaluate_result.get()["u"], dtype=np.float64)
-        sse_state = np.sum(np.linalg.norm(states[:-1], axis=1) ** 2) * t_interval + np.linalg.norm(states[-1]) ** 2
+        sse_state = np.sum(np.linalg.norm(states[:-1], axis=1) ** 2) * t_interval
         sse_u = np.sum(np.linalg.norm(us, axis=1) ** 2) * t_interval
+        sse_final_state = np.linalg.norm(states[-1]) ** 2
 
         # 結果の追加
         sse_states.append(sse_state)
         sse_us.append(sse_u)
+        sse_final_states.append(sse_final_state)
 
         # Close runner
         runner.close()
     sse_states = np.array(sse_states, dtype=np.float64)
     sse_us = np.array(sse_us, dtype=np.float64)
+    sse_final_states = np.array(sse_final_states, dtype=np.float64)
 
     # データの保存
     savedir = os.path.join(config["runner"]["save"]["savedir"], "pareto_optimal_solutions")
     os.makedirs(savedir, exist_ok=True)
     with open(os.path.join(savedir, "sum_square_errors.pickle"), "wb") as f:
-        pickle.dump({"s": sse_states, "u": sse_us}, f)
+        pickle.dump({"s": sse_states, "u": sse_us, "final_s": sse_final_states}, f)
     figure_data = {
         "x": {
-            "label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{x}^T\\boldsymbol{x}dt"
-            + " + \\boldsymbol{x}^T(t_f)\\boldsymbol{x}(t_f)$",
+            "label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{x}^T\\boldsymbol{x}dt$",
             "value": sse_states,
         },
         "y": {"label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{u}^T\\boldsymbol{u}dt$", "value": sse_us},
+        "z": {"label": "$\\boldsymbol{x}^T(t_f)\\boldsymbol{x}(t_f)$", "value": sse_final_states},
     }
     savefile = "pareto_optimal_solutions.png"
-    figure_maker = FigureMaker()
+    figure_maker = FigureMaker3d()
     figure_maker.reset()
-    figure_maker.make(figure_data, draw_type="scatter")
+    figure_maker.make(figure_data)
     figure_maker.save(savedir, savefile=savefile)
     figure_maker.close()

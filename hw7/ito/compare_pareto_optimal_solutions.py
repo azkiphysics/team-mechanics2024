@@ -3,7 +3,7 @@ import pickle
 
 import matplotlib.pyplot as plt
 
-from common.utils import FigureMaker
+from common.utils import FigureMaker3d
 
 # Matplotlibで綺麗な論文用のグラフを作る
 # https://qiita.com/MENDY/items/fe9b0c50383d8b2fd919
@@ -21,27 +21,30 @@ plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
 
 if __name__ == "__main__":
     savedir = os.path.join("results", "CartPoleEnv", "Balance")
-    subdirs = ["LQR", "TD3/scratch/pareto_optimal_solutions"]
+    subdirs = ["LQR", "TD3/scratch"]
     savepaths = [
         os.path.join(savedir, subdir, "pareto_optimal_solutions", "sum_square_errors.pickle") for subdir in subdirs
     ]
     labels = ["LQR", "TD3"]
 
-    figure_maker = FigureMaker()
+    figure_maker = FigureMaker3d()
     figure_maker.reset()
-    for idx, savepath in enumerate(savepaths):
+    figure_data = []
+    for label, savepath in zip(labels, savepaths):
         with open(savepath, "rb") as f:
             data = pickle.load(f)
-            figure_data = {
+            figure_data_idx = {
+                "label": label,
                 "x": {
-                    "label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{x}^T\\boldsymbol{x}dt"
-                    + " + \\boldsymbol{x}^T(t_f)\\boldsymbol{x}(t_f)$",
+                    "label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{x}^T\\boldsymbol{x}dt$",
                     "value": data["s"],
                 },
                 "y": {
                     "label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{u}^T\\boldsymbol{u}dt$",
-                    "value": [{"label": labels[idx], "value": data["u"]}],
+                    "value": data["u"],
                 },
+                "z": {"label": "$\\boldsymbol{x}^T(t_f)\\boldsymbol{x}(t_f)$", "value": data["final_s"]},
             }
-            figure_maker.make(figure_data, draw_type="scatter")
+            figure_data.append(figure_data_idx)
+    figure_maker.make(figure_data)
     figure_maker.save(savedir, "pareto_optimal_solutions.png")

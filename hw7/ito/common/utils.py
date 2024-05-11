@@ -84,6 +84,40 @@ class FigureMaker(object):
         plt.close("all")
 
 
+class FigureMaker3d(FigureMaker):
+    """3D図作成クラス"""
+
+    def reset(self):
+        """3D図作成ツールの初期化"""
+        if self.ax is None:
+            self.fig, self.ax = plt.subplots(figsize=(6, 6), subplot_kw={"projection": "3d"})
+        else:
+            self.ax.cla()
+
+    def make(self, data: List[Dict[str, Dict[str, np.ndarray]]] | Dict[str, Dict[str, np.ndarray]]):
+        """図の作成"""
+        if isinstance(data, dict):
+            data = [data]
+        for data_idx in data:
+            label = data_idx.get("label")
+            x = data_idx.get("x")
+            y = data_idx.get("y")
+            z = data_idx.get("z")
+            x_label = x.get("label", "")
+            x_value = x.get("value")
+            y_label = y.get("label", "")
+            y_value = y.get("value")
+            z_label = z.get("label", "")
+            z_value = z.get("value")
+
+            self.ax.scatter(x_value, y_value, z_value, label=label)
+            self.ax.set_xlabel(x_label)
+            self.ax.set_ylabel(y_label)
+            self.ax.set_zlabel(z_label)
+        if len(data) > 1:
+            self.ax.legend(loc="upper right")
+
+
 class MovieMaker(object):
     """動画作成クラス"""
 
