@@ -21,11 +21,11 @@ plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
 
 if __name__ == "__main__":
     savedir = os.path.join("results", "CartPoleEnv", "Balance")
-    subdirs = ["LQR", "TD3/scratch"]
+    subdirs = ["LQR", "DDPG/scratch", "TD3/scratch"]
     savepaths = [
         os.path.join(savedir, subdir, "pareto_optimal_solutions", "sum_square_errors.pickle") for subdir in subdirs
     ]
-    labels = ["LQR", "TD3"]
+    labels = ["LQR", "DDPG", "TD3"]
 
     figure_maker = FigureMaker3d()
     figure_maker.reset()

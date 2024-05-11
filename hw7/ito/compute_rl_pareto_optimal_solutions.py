@@ -20,20 +20,6 @@ def execute_rl_training(
     config["env"]["reset"]["R"] = R
     config["env"]["reset"]["w_base"] = R * 25.0 if np.abs(R) > 1e-11 else 2.5
     config["runner"]["evaluate"]["is_render"] = False
-    Qf = config["env"]["reset"]["Qf"]
-    savedir = os.path.join(
-        "results",
-        "CartPoleEnv",
-        "Balance",
-        "TD3",
-        "scratch",
-        "pareto_optimal_solutions",
-        f"Q_{Q:.1f}_R_{R:.1f}_Qf_{Qf:.1f}",
-    )
-    os.makedirs(savedir, exist_ok=True)
-    config["runner"]["save"]["savedir"] = savedir
-    with open(os.path.join(savedir, "config.yaml"), "w") as f:
-        yaml.safe_dump(config, f)
 
     # 環境の設定
     env_config = {
@@ -99,13 +85,14 @@ def worker(conn: PipeConnection):
 
 
 if __name__ == "__main__":
-    n_workers = 4
-    config_path = os.path.join("configs", "CartPoleEnv", "Balance", "TD3.yaml")
+    n_workers = 5
+    rl_algorithm = "TD3"
+    config_path = os.path.join("configs", "CartPoleEnv", "Balance", f"{rl_algorithm}.yaml")
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
-    Qs = np.linspace(0.1, 0.7, 10)
-    Rs = np.linspace(0.0, 0.8, 10)
+    Qs = np.linspace(0.1, 0.7, 5)
+    Rs = np.linspace(0.0, 0.8, 5)
     Qs, Rs = [val.reshape(-1) for val in np.meshgrid(Qs, Rs)]
 
     sse_states = np.zeros_like(Qs, dtype=np.float64)
@@ -153,10 +140,12 @@ if __name__ == "__main__":
             p.join()
 
         # データの保存
-        savedir = os.path.join("results", "CartPoleEnv", "Balance", "TD3", "scratch", "pareto_optimal_solutions")
+        savedir = os.path.join(
+            "results", "CartPoleEnv", "Balance", rl_algorithm, "scratch", "pareto_optimal_solutions"
+        )
         os.makedirs(savedir, exist_ok=True)
         with open(os.path.join(savedir, "sum_square_errors.pickle"), "wb") as f:
-            pickle.dump({"s": sse_states, "u": sse_us, "final_s": sse_final_states}, f)
+            pickle.dump({"Q": Qs, "R": Rs, "s": sse_states, "u": sse_us, "final_s": sse_final_states}, f)
         figure_data = {
             "x": {
                 "label": "$\\int_{t=0}^{t_{\\mathrm{max}}}\\boldsymbol{x}^T\\boldsymbol{x}dt$",
