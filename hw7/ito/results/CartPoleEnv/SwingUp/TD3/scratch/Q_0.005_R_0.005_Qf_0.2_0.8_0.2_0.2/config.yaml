@@ -1,13 +1,13 @@
 agent:
   init:
-    action_noise: 0.1
+    action_noise: 0.12
     actor_learning_rate: 0.001
     batch_size: 512
     critic_learning_rate: 0.001
     gamma: 0.999
     policy_delay: 2
-    target_noise: 0.1
-    target_noise_clip: 0.12
+    target_noise: 0.12
+    target_noise_clip: 0.15
     tau: 0.005
   name: TD3
   reset: {}
@@ -25,13 +25,13 @@ env:
     t_max: 15.0
   name: CartPoleEnv
   reset:
-    Q:
+    Q: 0.005
+    Qf:
     - 0.2
     - 0.8
     - 0.2
     - 0.2
-    Qf: 0.4
-    R: 0.0
+    R: 0.005
     initial_t: 0.0
     initial_x:
     - 0.0
@@ -51,9 +51,8 @@ env:
     - 0.0
     - 0.0
     - 0.0
-    w_base: 0.1
-    w_final: 40.0
-    w_state: 1.0
+    w_base: 0.5
+    w_final: 5.0
   wrappers:
   - init:
       action_high:
@@ -86,4 +85,4 @@ runner:
     total_timesteps: 40000
     trainfreq: 1
   save:
-    savedir: results/CartPoleEnv/SwingUp/TD3/scratch
+    savedir: results/CartPoleEnv/SwingUp/TD3/scratch/Q_0.005_R_0.005_Qf_0.2_0.8_0.2_0.2
