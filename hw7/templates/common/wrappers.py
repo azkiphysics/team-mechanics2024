@@ -36,8 +36,8 @@ class Wrapper(object):
     def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
         return self.env.get_observation(t, x, u=u).astype(self.observation_space.dtype)
 
-    def convert_action(self, action: np.ndarray) -> np.ndarray:
-        return action.astype(np.float64)
+    def convert_action(self, action: np.ndarray | int) -> np.ndarray:
+        return action
 
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
         return self.env.get_reward(t, x, u)

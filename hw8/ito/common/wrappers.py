@@ -345,32 +345,6 @@ class ContinuousRLMultiBodyEnvWrapper(RLMultiBodyEnvWrapper):
         return action.astype(np.float64)
 
 
-class RLCartPoleObservationWrapper(Wrapper):
-    """倒立振子環境専用のobservationラッパー
-    強化学習のエージェントが受け取る観測量を(x_cart, Θ_ball, v_cart, w_ball)から
-    (x_cart, cos(Θ_ball), sin(Θ_ball), w_ball)に変換する．
-
-    (注) 本ラッパーは強化学習のみに使用し，RLMultiBodyEnvWrapperよりも後に配置する．
-    """
-
-    @property
-    def observation_space(self) -> Box:
-        low = self.env.observation_space.low
-        high = self.env.observation_space.high
-        new_low = np.array([low[0], -1.0, 1.0, *low[2:]], dtype=np.float64)
-        new_high = np.array([high[0], 1.0, 1.0, *high[2:]], dtype=np.float64)
-        dtype = np.float32
-        return Box(new_low, new_high, dtype=dtype, shape=(new_low.shape[0],))
-
-    def get_observation(self, t: float, x: np.ndarray, u: np.ndarray | None = None) -> np.ndarray:
-        observation = self.env.get_observation(t, x, u)
-        new_observation = np.zeros(observation.shape[0] + 1, dtype=np.float32)
-        new_observation[[0, 3, 4]] = observation[[0, 2, 3]].copy()
-        new_observation[1] = np.cos(observation[1])
-        new_observation[2] = np.sin(observation[2])
-        return new_observation
-
-
 class RLTimeObservationWrapper(Wrapper):
     @property
     def observation_space(self) -> Box:
