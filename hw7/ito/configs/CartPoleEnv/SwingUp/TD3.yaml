@@ -32,7 +32,7 @@ env:
       - 0.8
       - 0.2
       - 0.2
-    R: 0.005
+    R: 0.01
     w_base: 0.5
     w_final: 5.0
   wrappers:
@@ -86,4 +86,4 @@ runner:
     moviefreq: 1
     renderfreq: 1
   save:
-    savedir: results/CartPoleEnv/SwingUp/TD3/scratch/Q_0.005_R_0.005_Qf_0.2_0.8_0.2_0.2
+    savedir: results/CartPoleEnv/SwingUp/TD3/scratch/Q_0.005_R_0.01_Qf_0.2_0.8_0.2_0.2
