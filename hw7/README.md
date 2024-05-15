@@ -34,7 +34,8 @@ hw7
     |   └── wrappers.py
     ├── configs
     |   └── CartPoleEnv
-    |       └── LQR.yaml
+    |       └── Balance
+    |           └── LQR.yaml
     ├── answer1.py
     └── answer2.py
 ```
@@ -63,22 +64,22 @@ cd hw7/(ご自身で作成したディレクトリ)
 python answer1.py configs/CartPoleEnv/LQR.yaml
 ```
 
-プログラムをコマンドプロンプトから実行すると，`results/CartPoleEnv/LQR/evaluate`ディレクトリ内に結果が保存されているので制御が上手くいったか確認してください．上手くいくと，以下の動画のように倒立振子が制御できている様子が確認できます．
+プログラムをコマンドプロンプトから実行すると，`results/CartPoleEnv/Balance/LQR/evaluate`ディレクトリ内に結果が保存されているので制御が上手くいったか確認してください．上手くいくと，以下の動画のように倒立振子が制御できている様子が確認できます．
 
 ![](ito/results/CartPoleEnv/Balance/LQR/evaluate/animation.gif)
 
 ### 課題2 (LQR制御のパレート解)
 課題2では，LQR制御の目的関数内の係数行列 $\mathrm{Q}$ と $\mathrm{R}$ を変えた時の制御結果について調べます．
 
-ここでは, $\mathrm{Q} = \mathrm{E}_n$ ( $\mathrm{E}_n$ : 単位行列) で固定して $R$ を $0.1\sim 10.0$ まで $0.1$ 刻みで変化させ最適化を行います．そして，最適化後の目的関数の第1項と第2項の値を図にプロットします．
+ここでは, $\mathrm{Q} = \mathrm{E}_n$ ( $\mathrm{E}_n$ : 単位行列) で固定して $R$ を $2.0\sim 10.0$ まで $2.0$ 刻みで変化させ最適化を行います．そして，最適化後の目的関数の第1項と第2項の値を図にプロットします．
 
 以下のコマンドをご自身が作成したディレクトリ上で実行してください．
 
 ```zsh
-python answer1.py configs/CartPoleEnv/LQR.yaml
+python answer2.py
 ```
 
-プログラムをコマンドプロンプトから実行すると，全ての条件で最適化が行われ，`results/CartPoleEnv/LQR`内にパレート解の結果が`pareto_optimal_solution.png`という図に出力されます (下図)．
+プログラムをコマンドプロンプトから実行すると，全ての条件で最適化が行われ，`results/CartPoleEnv/Balance/LQR/pareto_optimal_solutions`ディレクトリ内にパレート解の結果が`pareto_optimal_solution.png`という図に出力されます (下図)．
 
 ![](ito/results/CartPoleEnv/Balance/LQR/pareto_optimal_solutions.png)
 
