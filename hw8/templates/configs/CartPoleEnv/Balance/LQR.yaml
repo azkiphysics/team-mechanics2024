@@ -1,0 +1,68 @@
+env:
+  name: CartPoleEnv
+  init:
+    t_max: 15.0
+    dt: 1.0e-3
+    m_cart: 1.0
+    m_ball: 1.0
+    l_pole: 1.0
+  reset:
+    initial_t: 0.0
+    initial_x:
+      - 0.0
+      - 0.0
+      - 1.0
+      - 1.8707963267948966
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+    target_x:
+      - 1.0
+      - 0.0
+      - 1.0
+      - 1.5707963267948966
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+    Q: 1.0
+    Qf: 1.0
+    R: 1.0
+  wrappers:
+    - name: LQRMultiBody
+      init:
+        state_low:
+          - -3.5
+          - -10.0
+          - -10.0
+          - -10.0
+        state_high:
+          - 3.5
+          - 10.0
+          - 10.0
+          - 10.0
+agent:
+  name: LQR
+  init: {}
+  reset:
+    Q: 1.0
+    R: 1.0
+buffer:
+  name: Buffer
+  init:
+    maxlen:
+  reset: {}
+runner:
+  name: Runner
+  init: {}
+  reset: {}
+  run:
+    total_timesteps: 0
+    learning_starts: 0
+    trainfreq: 1
+  evaluate:
+    moviefreq: 1
+    renderfreq: 100
+  save:
+    savedir: results/CartPoleEnv/Balance/LQR

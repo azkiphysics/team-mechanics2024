@@ -68,3 +68,34 @@ cd hw8\(ご自身で作成したディレクトリ)
 ```zsh
 cd hw8/(ご自身で作成したディレクトリ)
 ```
+
+### 課題1 (DQNによる倒立振子制御)
+課題1では，DQNを用いて倒立振子を $x_{\mathrm{cart}} = 1.0$ に維持するという制御を行います．ご自身が作成したディレクトリ上で以下のコマンドを実行してください．
+
+```zsh
+python answer.py configs/CartPoleEnv/Balance/DQN.yaml
+```
+
+### 課題2 (DDPGによる倒立振子制御)
+課題2では，DDPGを用いて倒立振子を $x_{\mathrm{cart}} = 1.0$ に維持するという制御を行います．ご自身が作成したディレクトリ上で以下のコマンドを実行してください．
+
+```zsh
+python answer.py configs/CartPoleEnv/Balance/DDPG.yaml
+```
+
+### 課題3 (TD3による倒立振子制御)
+課題2では，TD3を用いて倒立振子を $x_{\mathrm{cart}} = 1.0$ に維持するという制御を行います．ご自身が作成したディレクトリ上で以下のコマンドを実行してください．
+
+```zsh
+python answer.py configs/CartPoleEnv/Balance/TD3.yaml
+```
+
+### 課題4 (LQR制御と強化学習による制御の比較)
+課題1~3で得られた結果とhw7で得られた結果を比較して，LQR制御と強化学習で制御結果にどのような違いがあるか考察してください．
+
+### おまけ課題 (TD3によるCartPoleの振り上げ制御)
+本課題では，下にある状態( $\theta_{\mathrm{poll}} = -\pi/2$ )の棒を振り上げて $x_{\mathrm{cart}} = 1.0$ に維持するという制御を行います．ご自身が作成したディレクトリ上で以下のコマンドを実行してください．
+
+```zsh
+python answer.py configs/CartPoleEnv/SwingUp/TD3.yaml
+```

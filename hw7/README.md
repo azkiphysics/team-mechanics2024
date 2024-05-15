@@ -61,7 +61,7 @@ cd hw7/(ご自身で作成したディレクトリ)
 課題1では，倒立振子を $x_{\mathrm{cart}} = 1.0$ に維持するという制御をLQR制御を用いて行います．`common/agents.py`の`LQRAgent.reset`メソッド内でRicacci代数方程式を解くコードを実装し，以下のコマンドをご自身が作成したディレクトリ上で実行してください．
 
 ```zsh
-python answer1.py configs/CartPoleEnv/LQR.yaml
+python answer1.py configs/CartPoleEnv/Balance/LQR.yaml
 ```
 
 プログラムをコマンドプロンプトから実行すると，`results/CartPoleEnv/Balance/LQR/evaluate`ディレクトリ内に結果が保存されているので制御が上手くいったか確認してください．上手くいくと，以下の動画のように倒立振子が制御できている様子が確認できます．
