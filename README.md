@@ -45,7 +45,7 @@ Gitはソースコードや変更履歴を管理するために使われるバ�
 #### GitHub Desktopとは
 通常，GitHubはコマンドプロンプト(= Command User Interface, CUI)を利用し，gitコマンドをGitHubに送受信することでGitHub上のレポジトリ(≒フォルダ)の更新を行います (e.g., `git push REMOTE-NAME BRANCH-NAME`)．一方，GitHub Desktopでは，Github Desktopの専用アプリ(=Graphic User Interface, GUI)を利用し，GitHubとのやり取りを行います．これにより，gitコマンドを知らなくても簡単にレポジトリの更新を行うことができます．本課題では基本的にGitHub Desktopを利用して，課題の提出を行っていただきます．
 #### インストール
-[GitHub Desktop](https://desktop.github.com/)のサイトからインストールしてください．
+[Git](https://git-scm.com/book/ja/v2/使い始める-Gitのインストール)のインストールと[GitHub Desktop](https://desktop.github.com/)のインストールを行なってください．
 
 ## Pythonの使い方
 ### 仮想環境の作成と有効化
