@@ -48,8 +48,7 @@ hw8
     |       └── Pendulum-v1
     |           ├── DDPG.yaml
     |           └── TD3.yaml
-    ├── answer1.py
-    └── answer2.py
+    └── answer.py
 ```
 
 #### プログラム実行時の注意点
