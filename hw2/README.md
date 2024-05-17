@@ -25,12 +25,9 @@ if __name__ == "__main__":
             print(f"{x} is not an integer.")
             continue
 
-    if x < 0:
-        print(0)
-    elif x < 1:
-        print(1)
-    else:
-        print(2)
+    """
+    以下にif文を使った解答を作成してください．
+    """
 ```
 
 **解答例**
