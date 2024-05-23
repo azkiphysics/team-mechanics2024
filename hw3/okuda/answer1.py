@@ -10,3 +10,4 @@ def fibonacci(n):
 if __name__ == "__main__":
     answer = fibonacci(10)
     print(answer)
+    print(a)
