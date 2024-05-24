@@ -286,16 +286,28 @@ $$
 
 上記の価値関数，行動価値関数に関する再帰方程式のことを**ベルマン方程式**と呼びます．強化学習ではこれらの4つのうちのいずれかを利用して，方策や価値関数, 行動価値関数を更新します．
 
-##### DQN
+##### Deep Q network (DQN)
+Deep Q network (DQN)は最適行動価値関数 $Q^\ast(s, a)$ をニューラルネットワークで近似したモデル $Q_\theta(s, a)$ を用いて行動を決定します．この時の行動は以下の式で表されます．
+
+$$
+a = \arg\max_{a}Q_\theta(s, a).
+$$
+
+行動価値関数 $Q_\theta(s, a)$ は最適行動価値関数のベルマン方程式の左辺を予測値，右辺を目標値として最小二乗誤差を計算します．したがって，損失関数 $\mathcal{L}$ は次のように表されます．
+
+$$
+\mathcal{L} = \mathbb{E}\_{(s, a, s')\sim\mathcal{D}}\Bigg[\frac{1}{2}\Big(r(s, a, s') + \gamma \max_{a'}Q_\theta(s', a') - Q_\theta(s, a)\Big)^2\Bigg]
+$$
+
 ![](./ito/algorithms/dqn.png)
 
-##### DDPG
+##### Deep deterministic policy gradient (DDPG)
 ![](./ito/algorithms/ddpg.svg)
 
-##### TD3
+##### Twin delay deep deterministic policy gradient (TD3)
 ![](./ito/algorithms/td3.svg)
 
-##### SAC
+##### Soft actor critic (SAC)
 ![](./ito/algorithms/sac.svg)
 
 #### 学習の工夫
