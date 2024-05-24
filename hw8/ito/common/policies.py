@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
@@ -116,20 +118,13 @@ class SACActor(nn.Module):
         action = torch.tanh(distribution.mean)
         return action
 
-    def log_prob_pi(self, obs: torch.Tensor) -> torch.Tensor:
+    def log_prob_pi(self, obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         distribution = self.forward(obs)
         gaussian_action = distribution.rsample()
         action = torch.tanh(gaussian_action)
         log_prob = torch.sum(distribution.log_prob(gaussian_action), dim=1, keepdim=True)
         log_prob -= torch.sum(torch.log(1 - action**2 + self.epsilon), dim=1, keepdim=True)
-        return log_prob
-
-    def log_prob(self, obs: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
-        distribution = self.forward(obs)
-        gaussian_action = torch.atanh(action)
-        log_prob = torch.sum(distribution.log_prob(gaussian_action), dim=1, keepdim=True)
-        log_prob -= torch.sum(torch.log(1 - action**2 + self.epsilon), dim=1, keepdim=True)
-        return log_prob
+        return action, log_prob
 
 
 class SACCritic(nn.Module):

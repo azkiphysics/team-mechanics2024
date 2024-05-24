@@ -703,7 +703,7 @@ class SACAgent(DRLAgent):
             # Important: detach the variable from the graph
             # so we don't change it with other losses
             # see https://github.com/rail-berkeley/softlearning/issues/60
-            log_prob_pi_pt = self.policy.log_prob_pi(obs_pt)
+            _, log_prob_pi_pt = self.policy.log_prob_pi(obs_pt)
             ent_coef_loss = -(self.log_ent_coef * (log_prob_pi_pt + self.target_entropy).detach()).mean()
 
             # Optimize entropy coefficient, also called
@@ -719,8 +719,7 @@ class SACAgent(DRLAgent):
         obs_action_pt = torch.cat([obs_pt, action_pt], dim=1)
         qs_pt = tuple(q_network.forward(obs_action_pt) for q_network in self.q_networks)
         with torch.no_grad():
-            next_action_pi_pt = self.policy.get_probabilistic_action(next_obs_pt)
-            next_log_prob_pi_pt = self.policy.log_prob(next_obs_pt, next_action_pi_pt)
+            next_action_pi_pt, next_log_prob_pi_pt = self.policy.log_prob_pi(next_obs_pt)
             next_obs_next_action_pi_pt = torch.cat((next_obs_pt, next_action_pi_pt), dim=1)
             target_next_q_pi_pt, _ = torch.min(
                 torch.cat(
@@ -743,8 +742,7 @@ class SACAgent(DRLAgent):
 
         # Policyの更新
         self.policy.train(True)
-        action_pi_pt = self.policy.get_probabilistic_action(obs_pt)
-        log_prob_pi_pt = self.policy.log_prob(obs_pt, action_pi_pt)
+        action_pi_pt, log_prob_pi_pt = self.policy.log_prob_pi(obs_pt)
         obs_action_pi_pt = torch.concat([obs_pt, action_pi_pt], dim=1)
         q_pi_pt, _ = torch.min(
             torch.cat(tuple(q_network(obs_action_pi_pt) for q_network in self.q_networks), dim=1), dim=1, keepdim=True
