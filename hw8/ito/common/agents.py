@@ -697,14 +697,13 @@ class SACAgent(DRLAgent):
             np.array(data["done"], dtype=np.float32).reshape(-1, 1), dtype=torch.float32, device=self.device
         )
 
-        log_prob_pi_pt = self.policy.log_prob_pi(obs_pt)
-
         ent_coef = torch.exp(self.log_ent_coef.detach())
         if isinstance(self.ent_coef, str) and self.ent_coef.startswith("auto"):
             self.log_ent_coef.requires_grad_(True)
             # Important: detach the variable from the graph
             # so we don't change it with other losses
             # see https://github.com/rail-berkeley/softlearning/issues/60
+            log_prob_pi_pt = self.policy.log_prob_pi(obs_pt)
             ent_coef_loss = -(self.log_ent_coef * (log_prob_pi_pt + self.target_entropy).detach()).mean()
 
             # Optimize entropy coefficient, also called
@@ -745,9 +744,12 @@ class SACAgent(DRLAgent):
         # Policyの更新
         self.policy.train(True)
         action_pi_pt = self.policy.get_probabilistic_action(obs_pt)
+        log_prob_pi_pt = self.policy.log_prob(obs_pt, action_pi_pt)
         obs_action_pi_pt = torch.concat([obs_pt, action_pi_pt], dim=1)
-        q_pi_pt = self.q_networks[0].forward(obs_action_pi_pt)
-        actor_loss_pt = -(q_pi_pt - ent_coef * log_prob_pi_pt).mean()
+        q_pi_pt, _ = torch.min(
+            torch.cat(tuple(q_network(obs_action_pi_pt) for q_network in self.q_networks), dim=1), dim=1, keepdim=True
+        )
+        actor_loss_pt = (-q_pi_pt + ent_coef * log_prob_pi_pt).mean()
         self.actor_optimizer.zero_grad()
         actor_loss_pt.backward()
         self.actor_optimizer.step()
