@@ -293,11 +293,44 @@ $$
 a = \arg\max_{a}Q_\theta(s, a).
 $$
 
-行動価値関数 $Q_\theta(s, a)$ は最適行動価値関数のベルマン方程式の左辺を予測値，右辺を目標値として最小二乗誤差を計算します．したがって，損失関数 $\mathcal{L}$ は次のように表されます．
+DQNの注意点として，行動空間は離散的である必要があります．そのため，制御入力が連続値を取るような制御問題では，制御入力を離散化してDQNを適用する必要があります．
+
+行動価値関数 $Q_\theta(s, a)$ は最適行動価値関数のベルマン方程式の左辺を予測値，右辺を目標値として最小二乗誤差を計算します．したがって，損失関数 $\mathcal{L}$ は次のように定義されます．ここで, $\mathcal{D}$ は環境とエージェントの相互作用によって得られた遷移データを集めたデータベースを表します．このようなデータベースをリプレイバッファと呼びます．
 
 $$
-\mathcal{L} = \mathbb{E}\_{(s, a, s')\sim\mathcal{D}}\Bigg[\frac{1}{2}\Big(r(s, a, s') + \gamma \max_{a'}Q_\theta(s', a') - Q_\theta(s, a)\Big)^2\Bigg]
+\begin{eqnarray}
+    \mathcal{L} &=& \mathbb{E}\_{(s, a, s')\sim\mathcal{D}}\Bigg[\frac{1}{2}\Big(y - Q_\theta(s, a)\Big)^2\Bigg]\\
+    y &=& r(s, a, s') + \gamma \max_{a'}Q_\theta(s', a')
+\end{eqnarray}
 $$
+
+上記のDQNの損失関数でもある程度学習は可能ですが，実際には上記の損失関数を2点改良したものを利用します．1点目は, 損失関数に最小二乗誤差ではなくHuber損失を利用します．Huber損失は以下の式で定義される関数で，最小二乗誤差よりも勾配が小さいため，バックプロパゲーション時の勾配爆発を防ぐことができます．また, 本課題では $\delta = 1.0$ としたSmooth L1 lossを利用します．
+
+$$
+\mathrm{HuberLoss}(a) = \begin{cases}
+    \frac{1}{2}a^2, & |a|\leq\delta\\
+    \delta\Big(|a| - \frac{1}{2}\delta\Big), & |a| > \delta
+\end{cases}
+$$
+
+2点目の改良は, 目標値 $y$ に関する式の右辺第2項の行動価値関数 $Q_\theta(s', a')$ に数iteration前の行動価値関数 $Q_{\theta_{\mathrm{target}}}(s', a')$ を利用します．ここで，iterationとは行動価値関数の更新回数を表します．
+
+以上より，DQNの改良後の損失関数は以下のようになります．
+
+$$
+\begin{eqnarray}
+    \mathcal{L} &=& \mathbb{E}\_{(s, a, s')\sim\mathcal{D}}\Big[\mathrm{HuberLoss}(y - Q_\theta(s, a))\Big]\\
+    y &=& r(s, a, s') + \gamma \max_{a'}Q_{\theta_{\mathrm{target}}}(s', a')
+\end{eqnarray}
+$$
+
+上記の損失関数 $\mathcal{L}$ を用いて，行動価値関数のパラメータ $\theta$ を勾配降下法により求めます. $\eta$ は学習率を表します．
+
+$$
+\theta \leftarrow \theta - \eta\nabla_{\theta}\mathcal{L}
+$$
+
+以下にDQNの疑似コードを載せておきます．
 
 ![](./ito/algorithms/dqn.png)
 
