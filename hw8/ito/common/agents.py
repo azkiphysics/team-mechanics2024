@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import LinearLR
 
 from .buffers import Buffer
 from .envs import Env
-from .policies import DDPGActor, DDPGCritic, DQNPolicy
+from .policies import DDPGActor, DDPGCritic, DQNPolicy, SACActor, SACCritic
 from .wrappers import (
     ContinuousRLMultiBodyEnvWrapper,
     DQNMultiBodyEnvWrapper,
@@ -558,6 +558,216 @@ class TD3Agent(DDPGAgent):
         torch.save(self.target_policy.state_dict(), target_policy_path)
         self.policy.to(self.device)
         self.target_policy.to(self.device)
+        for idx, (q_network, target_q_network) in enumerate(zip(self.q_networks, self.target_q_networks)):
+            q_network_path = os.path.join(_savedir, f"q_network{idx + 1}.pt")
+            target_q_network_path = os.path.join(_savedir, f"target_q_network{idx + 1}.pt")
+            q_network.to("cpu")
+            target_q_network.to("cpu")
+            torch.save(q_network.state_dict(), q_network_path)
+            torch.save(target_q_network.state_dict(), target_q_network_path)
+            q_network.to(self.device)
+            target_q_network.to(self.device)
+
+
+class SACAgent(DRLAgent):
+    def __init__(
+        self,
+        env: ContinuousRLMultiBodyEnvWrapper,
+        actor_learning_rate: float = 3e-4,
+        critic_learning_rate: float = 3e-4,
+        ent_coef_learning_rate: float = 3e-4,
+        gamma: float = 0.99,
+        batch_size: int = 256,
+        tau: float = 0.005,
+        actor_scheduler_last_ratio: float = 1.0,
+        actor_scheduler_iters: int = 0,
+        critic_scheduler_last_ratio: float = 1.0,
+        critic_scheduler_iters: int = 0,
+        ent_coef: str | float = "auto",
+        target_entropy: str | float = "auto",
+        device: torch.device | str = "auto",
+        loaddir: str | None = None,
+    ) -> None:
+        self.env = env
+        self.device = self.get_device(device=device)
+
+        self.policy = SACActor(env.observation_space, env.action_space).to(self.device)
+
+        self.q_networks = tuple(SACCritic(env.observation_space, env.action_space).to(self.device) for _ in range(2))
+        self.target_q_networks = tuple(
+            SACCritic(env.observation_space, env.action_space).to(self.device) for _ in range(2)
+        )
+        if loaddir is not None:
+            policy_path = os.path.join(loaddir, "policy.pt")
+            self.policy.load_state_dict(torch.load(policy_path))
+        for idx, (q_network, target_q_network) in enumerate(zip(self.q_networks, self.target_q_networks)):
+            if loaddir is not None:
+                q_network_path = os.path.join(loaddir, f"q_network{idx + 1}.pt")
+                target_q_network_path = os.path.join(loaddir, f"target_q_network{idx + 1}.pt")
+                q_network.load_state_dict(torch.load(q_network_path))
+                target_q_network.load_state_dict(torch.load(target_q_network_path))
+            else:
+                target_q_network.load_state_dict(q_network.state_dict())
+            target_q_network.train(False)
+
+        self.actor_optimizer = torch.optim.Adam(self.policy.parameters(), lr=actor_learning_rate)
+        self.actor_scheduler = LinearLR(
+            self.actor_optimizer, 1.0, actor_scheduler_last_ratio, total_iters=actor_scheduler_iters
+        )
+        self.critic_optimizer = torch.optim.Adam(
+            tuple(self.q_networks[0].parameters()) + tuple(self.q_networks[1].parameters()), lr=critic_learning_rate
+        )
+        self.critic_scheduler = LinearLR(
+            self.critic_optimizer, 1.0, critic_scheduler_last_ratio, total_iters=critic_scheduler_iters
+        )
+
+        self.actor_learning_rate = actor_learning_rate
+        self.critic_learning_rate = critic_learning_rate
+        self.gamma = gamma
+        self.batch_size = batch_size
+        self.tau = tau
+        self.ent_coef = ent_coef
+
+        # The entropy coefficient or entropy can be learned automatically
+        # see Automating Entropy Adjustment for Maximum Entropy RL section
+        # of https://arxiv.org/abs/1812.05905
+        if isinstance(ent_coef, str) and ent_coef.startswith("auto"):
+            # Default initial value of ent_coef when learned
+            init_value = 1.0
+            if "_" in ent_coef:
+                init_value = float(ent_coef.split("_")[1])
+                assert init_value > 0.0, "The initial value of ent_coef must be greater than 0"
+
+            # Note: we optimize the log of the entropy coeff which is slightly
+            # different from the paper as discussed in
+            # https://github.com/rail-berkeley/softlearning/issues/37
+            self.log_ent_coef = nn.Parameter(torch.ones(1, device=self.device) * init_value, requires_grad=True)
+            self.ent_coef_optimizer = torch.optim.Adam([self.log_ent_coef], lr=ent_coef_learning_rate)
+        else:
+            # Force conversion to float
+            # this will throw an error if a malformed string
+            # (different from 'auto') is passed
+            self.log_ent_coef = nn.Parameter(
+                torch.log(torch.tensor(float(ent_coef), device=self.device)) + 1e-6, requires_grad=False
+            )
+            self.ent_coef_optimizer = None
+
+        if target_entropy == "auto":
+            self.target_entropy = float(-np.prod(self.env.action_space.shape).astype(np.float32))
+        else:
+            self.target_entropy = float(self.target_entropy)
+
+        self.is_evaluate: bool = False
+
+    def act(self, obs: np.ndarray) -> np.ndarray:
+        obs_pt = torch.tensor(
+            obs.reshape(-1, self.env.observation_space.shape[0]), dtype=torch.float32, device=self.device
+        )
+        if self.is_evaluate:
+            with torch.no_grad():
+                scaled_action_pt = self.policy.get_deterministic_action(obs_pt)
+        else:
+            with torch.no_grad():
+                scaled_action_pt = self.policy.get_probabilistic_action(obs_pt)
+        scaled_action: np.ndarray = scaled_action_pt.to("cpu").detach().numpy()[0]
+
+        clipped_ratio = (1.0 + scaled_action) / 2.0
+        low = self.env.action_space.low
+        high = self.env.action_space.high
+        clipped_action = low + (high - low) * clipped_ratio
+        return clipped_action
+
+    def train(self, buffer: Buffer, **kwargs):
+        low_pt = torch.tensor(self.env.action_space.low, dtype=torch.float32, device=self.device)
+        high_pt = torch.tensor(self.env.action_space.high, dtype=torch.float32, device=self.device)
+
+        # サンプルデータをtorch.tensorに変換
+        data = buffer.sample(self.batch_size)
+        obs_pt = torch.tensor(np.array(data["obs"], dtype=np.float32), dtype=torch.float32, device=self.device)
+        action_pt = -1.0 + 2.0 * (
+            torch.tensor(np.array(data["action"], dtype=np.float32), dtype=torch.float32, device=self.device) - low_pt
+        ) / (high_pt - low_pt)
+        next_obs_pt = torch.tensor(
+            np.array(data["next_obs"], dtype=np.float32), dtype=torch.float32, device=self.device
+        )
+        reward_pt = torch.tensor(
+            np.array(data["reward"], dtype=np.float32).reshape(-1, 1), dtype=torch.float32, device=self.device
+        )
+        done_pt = torch.tensor(
+            np.array(data["done"], dtype=np.float32).reshape(-1, 1), dtype=torch.float32, device=self.device
+        )
+
+        log_prob_pi_pt = self.policy.log_prob_pi(obs_pt)
+
+        ent_coef = torch.exp(self.log_ent_coef.detach())
+        if isinstance(self.ent_coef, str) and self.ent_coef.startswith("auto"):
+            self.log_ent_coef.requires_grad_(True)
+            # Important: detach the variable from the graph
+            # so we don't change it with other losses
+            # see https://github.com/rail-berkeley/softlearning/issues/60
+            ent_coef_loss = -(self.log_ent_coef * (log_prob_pi_pt + self.target_entropy).detach()).mean()
+
+            # Optimize entropy coefficient, also called
+            # entropy temperature or alpha in the paper
+            self.ent_coef_optimizer.zero_grad()
+            ent_coef_loss.backward()
+            self.ent_coef_optimizer.step()
+            self.log_ent_coef.requires_grad_(False)
+
+        # Q-networkの更新
+        for q_network in self.q_networks:
+            q_network.train(True)
+        obs_action_pt = torch.cat([obs_pt, action_pt], dim=1)
+        qs_pt = tuple(q_network.forward(obs_action_pt) for q_network in self.q_networks)
+        with torch.no_grad():
+            next_action_pi_pt = self.policy.get_probabilistic_action(next_obs_pt)
+            next_log_prob_pi_pt = self.policy.log_prob(next_obs_pt, next_action_pi_pt)
+            next_obs_next_action_pi_pt = torch.cat((next_obs_pt, next_action_pi_pt), dim=1)
+            target_next_q_pi_pt, _ = torch.min(
+                torch.cat(
+                    tuple(target_q_network(next_obs_next_action_pi_pt) for target_q_network in self.target_q_networks),
+                    dim=1,
+                ),
+                dim=1,
+                keepdim=True,
+            )
+            target_q_pt = reward_pt + self.gamma * (1.0 - done_pt) * (
+                target_next_q_pi_pt - ent_coef * next_log_prob_pi_pt
+            )
+        critic_loss_pt = 0.5 * sum(F.mse_loss(q_pt, target_q_pt) for q_pt in qs_pt)
+        self.critic_optimizer.zero_grad()
+        critic_loss_pt.backward()
+        self.critic_optimizer.step()
+        self.critic_scheduler.step()
+        for q_network in self.q_networks:
+            q_network.train(False)
+
+        # Policyの更新
+        self.policy.train(True)
+        action_pi_pt = self.policy.get_probabilistic_action(obs_pt)
+        obs_action_pi_pt = torch.concat([obs_pt, action_pi_pt], dim=1)
+        q_pi_pt = self.q_networks[0].forward(obs_action_pi_pt)
+        actor_loss_pt = -(q_pi_pt - ent_coef * log_prob_pi_pt).mean()
+        self.actor_optimizer.zero_grad()
+        actor_loss_pt.backward()
+        self.actor_optimizer.step()
+        self.actor_scheduler.step()
+        self.policy.train(False)
+
+        # Target networkの更新 (Polyak update)
+        with torch.no_grad():
+            for q_network, target_q_network in zip(self.q_networks, self.target_q_networks):
+                for param, target_param in zip(q_network.parameters(), target_q_network.parameters()):
+                    target_param.data.mul_(1 - self.tau)
+                    target_param.data.add_(self.tau * param.data)
+
+    def save(self, savedir: str):
+        _savedir = os.path.join(savedir, "agent")
+        os.makedirs(_savedir, exist_ok=True)
+        policy_path = os.path.join(_savedir, "policy.pt")
+        self.policy.to("cpu")
+        torch.save(self.policy.state_dict(), policy_path)
+        self.policy.to(self.device)
         for idx, (q_network, target_q_network) in enumerate(zip(self.q_networks, self.target_q_networks)):
             q_network_path = os.path.join(_savedir, f"q_network{idx + 1}.pt")
             target_q_network_path = os.path.join(_savedir, f"target_q_network{idx + 1}.pt")

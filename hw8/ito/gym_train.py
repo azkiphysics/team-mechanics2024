@@ -1,37 +1,25 @@
 import argparse
 import logging
-import os
-import pickle
 from logging import Formatter, StreamHandler, getLogger
 from typing import Dict, List
 
+import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 from tqdm import trange
 from tqdm.contrib.logging import logging_redirect_tqdm
 
-from common.agents import Agent, DDPGAgent, DQNAgent, LQRAgent, SACAgent, TD3Agent
+from common.agents import Agent, DDPGAgent, DQNAgent, SACAgent, TD3Agent
 from common.buffers import Buffer
-from common.envs import CartPoleEnv, Env
 from common.utils import FigureMaker, MovieMaker
-from common.wrappers import (
-    ContinuousRLMultiBodyEnvWrapper,
-    DQNMultiBodyEnvWrapper,
-    LQRMultiBodyEnvWrapper,
-    RLTimeObservationWrapper,
-)
 
 # ロガーの設定
-if __name__ == "__main__":
-    logger_level = logging.INFO
-else:
-    logger_level = logging.WARNING
 logger = getLogger(__name__)
-logger.setLevel(logger_level)
+logger.setLevel(logging.DEBUG)
 handler_format = Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 handler = StreamHandler()
-handler.setLevel(logger_level)
+handler.setLevel(logging.DEBUG)
 handler.setFormatter(handler_format)
 logger.addHandler(handler)
 
@@ -52,7 +40,7 @@ plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
 class Runner(object):
     def __init__(
         self,
-        env_config: Dict[str, Env | Dict[str, int | float] | List[Dict[str, int | float]]],
+        env_config: Dict[str, gym.Env | Dict[str, int | float] | List[Dict[str, int | float]]],
         agent_config: Dict[str, Agent | Dict[str, int | float]],
         buffer_config: Dict[str, Buffer | Dict[str, int]],
     ) -> None:
@@ -60,7 +48,7 @@ class Runner(object):
         self.agent_config = agent_config
         self.buffer_config = buffer_config
 
-        self.env: Env = env_config["class"](**env_config["init"])
+        self.env: gym.Env = env_config["class"](**env_config["init"])
         if "wrappers" in env_config:
             for env_wrapper_config in self.env_config["wrappers"]:
                 self.env = env_wrapper_config["class"](self.env, **env_wrapper_config["init"])
@@ -88,13 +76,14 @@ class Runner(object):
             for k_timesteps in trange(total_timesteps, leave=False):
                 action = self.agent.act(obs)
                 next_obs, reward, terminated, truncated, _ = self.env.step(action)
+                done = terminated or truncated
                 self.buffer.push(
                     {
                         "obs": obs.copy(),
                         "next_obs": next_obs.copy(),
                         "action": action.copy(),
                         "reward": reward,
-                        "done": terminated,
+                        "done": done,
                     }
                 )
                 total_rewards += reward
@@ -105,147 +94,110 @@ class Runner(object):
                     and k_timesteps % trainfreq == 0
                 ):
                     self.agent.train(buffer=self.buffer)
-                if terminated or truncated:
-                    k_episodes += 1
+                if done:
                     logger.info(f"episode: {k_episodes}/ total_rewards: {total_rewards}")
-                    self.run_result.push({"episode": k_episodes, "total_rewards": total_rewards})
+                    k_episodes += 1
                     total_rewards = 0.0
                     obs, _ = self.env.reset(**self.env_config["reset"])
-                else:
-                    obs = next_obs.copy()
+                obs = next_obs.copy()
+                self.run_result.push({"episode": k_episodes, "total_rewards": total_rewards})
 
-    def evaluate(self, is_render: bool = True, moviefreq: int = 1, renderfreq: int = 1):
+    def evaluate(self, moviefreq: int = 100):
         # シミュレーションの実行
-        obs, info = self.env.reset(**self.env_config["reset"])
-        self.agent.evaluate_mode(True)
+        obs, _ = self.env.reset(**self.env_config["reset"])
+        self.agent.reset(**self.agent_config["reset"], is_evaluate=True)
         done = False
+        k_steps = 0
         self.evaluate_result.reset()
-        self.evaluate_result.push(info)
-        if is_render:
-            self.movie_maker.reset()
-            frames = self.env.render()
-            self.movie_maker.add(frames[::moviefreq])
-            k_movie_steps = len(frames)
-            k_render_steps = 0
+        self.evaluate_result.push({"step": k_steps, "obs": obs.copy()})
+        self.movie_maker.reset()
+        self.movie_maker.add(self.env.render())
         while not done:
+            k_steps += 1
             action = self.agent.act(obs)
-            next_obs, _, terminated, truncated, info = self.env.step(action)
-            self.evaluate_result.push(info)
+            next_obs, _, terminated, truncated, _ = self.env.step(action)
+            self.evaluate_result.push({"step": k_steps, "obs": next_obs.copy(), "action": action.copy()})
             done = terminated or truncated
-            if is_render:
-                k_render_steps += 1
-                if k_render_steps % renderfreq == 0:
-                    frames = self.env.render()
-                    if moviefreq == 1:
-                        self.movie_maker.add(frames)
-                    else:
-                        self.movie_maker.add(frames[moviefreq - k_movie_steps % moviefreq :: moviefreq])
-                    k_movie_steps += len(frames)
+            if k_steps % moviefreq == 0 or done:
+                self.movie_maker.add(self.env.render())
             if done:
                 break
             obs = next_obs.copy()
-        self.agent.evaluate_mode(False)
 
     def save(self, savedir: str):
-        self.agent.save(savedir)
         if len(self.run_result) > 0:
             # 学習結果の保存
             training_data = self.run_result.get()
-            training_savedir = os.path.join(savedir, "run")
-            os.makedirs(training_savedir, exist_ok=True)
-            with open(os.path.join(training_savedir, "training_data.pickle"), "wb") as f:
-                pickle.dump(training_data, f)
-            # 学習結果の描画
             total_rewards_data = {
                 "x": {"label": "Episode", "value": np.array(training_data["episode"], dtype=np.float64)},
                 "y": {
-                    "label": "Total rewards",
+                    "label": "State $s$",
                     "value": np.array(training_data["total_rewards"], dtype=np.float64),
                 },
             }
             self.figure_maker.reset()
             self.figure_maker.make(total_rewards_data)
             savefile = "total_rewards.png"
-            self.figure_maker.save(training_savedir, savefile)
+            self.figure_maker.save(savedir, savefile)
 
         if len(self.evaluate_result) > 0:
-            # 評価結果の保存
             evaluate_data = self.evaluate_result.get()
-            evaluate_savedir = os.path.join(savedir, "evaluate")
-            os.makedirs(evaluate_savedir, exist_ok=True)
-            with open(os.path.join(evaluate_savedir, "evaluate_data.pickle"), "wb") as f:
-                pickle.dump(evaluate_data, f)
-            # 状態の描画
-            state_data = {
-                "x": {"label": "Time $t$ s", "value": np.array(evaluate_data["t"], dtype=np.float64)},
+            # 状態の保存
+            obs_data = {
+                "x": {"label": "Step", "value": np.array(evaluate_data["step"], dtype=np.float64)},
                 "y": {
-                    "label": "State $s$",
+                    "label": "Observation $o$",
                     "value": [
-                        {"label": "$" + f"s_{idx + 1}" + "$", "value": state_idx}
-                        for idx, state_idx in enumerate(np.array(evaluate_data["s"], dtype=np.float64).T)
+                        {"label": "$" + f"o_{idx + 1}" + "$", "value": state_idx}
+                        for idx, state_idx in enumerate(np.array(evaluate_data["obs"], dtype=np.float64).T)
                     ],
                 },
             }
-            savefile = "state.png"
+            savefile = "observation.png"
             self.figure_maker.reset()
-            self.figure_maker.make(state_data)
-            self.figure_maker.save(evaluate_savedir, savefile=savefile)
+            self.figure_maker.make(obs_data)
+            self.figure_maker.save(savedir, savefile=savefile)
 
-            # 制御入力の描画
-            u_data = {
-                "x": {"label": "Time $t$ s", "value": np.array(evaluate_data["t"], dtype=np.float64)[:-1]},
+            # 制御入力の保存
+            action = np.array(evaluate_data["action"], dtype=np.float64)
+            if isinstance(self.env.action_space, gym.spaces.Discrete):
+                action = action.reshape(-1, 1)
+            action_data = {
+                "x": {"label": "Step", "value": np.array(evaluate_data["step"], dtype=np.float64)[:-1]},
                 "y": {
-                    "label": "Control input $u$",
+                    "label": "Action $a$",
                     "value": [
-                        {"label": "$" + f"u_{idx + 1}" + "$", "value": u_idx}
-                        for idx, u_idx in enumerate(np.array(evaluate_data["u"], dtype=np.float64).T)
+                        {"label": "$" + f"a_{idx + 1}" + "$", "value": u_idx} for idx, u_idx in enumerate(action.T)
                     ],
                 },
             }
-            savefile = "u.png"
+            savefile = "action.png"
             self.figure_maker.reset()
-            self.figure_maker.make(u_data)
-            self.figure_maker.save(evaluate_savedir, savefile=savefile)
+            self.figure_maker.make(action_data)
+            self.figure_maker.save(savedir, savefile=savefile)
 
             # 動画の保存
             savefile = "animation.mp4"
-            self.movie_maker.make(evaluate_savedir, evaluate_data["t"][-1], savefile=savefile)
-
-    def close(self):
-        self.buffer.clear()
-        self.run_result.clear()
-        self.evaluate_result.clear()
-        self.figure_maker.close()
-        self.movie_maker.close()
+            self.movie_maker.make(savedir, 10.0, savefile=savefile)
 
 
-ENVS = {"CartPoleEnv": CartPoleEnv}
-AGENTS = {"DQN": DQNAgent, "DDPG": DDPGAgent, "LQR": LQRAgent, "SAC": SACAgent, "TD3": TD3Agent}
+AGENTS = {"DQN": DQNAgent, "DDPG": DDPGAgent, "SAC": SACAgent, "TD3": TD3Agent}
 BUFFERS = {"Buffer": Buffer}
 RUNNERS = {"Runner": Runner}
-WRAPPERS = {
-    "DQNMultiBody": DQNMultiBodyEnvWrapper,
-    "ContinuousRLMultiBody": ContinuousRLMultiBodyEnvWrapper,
-    "LQRMultiBody": LQRMultiBodyEnvWrapper,
-    "RLTimeObservation": RLTimeObservationWrapper,
-}
+WRAPPERS = {}
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Optimal control")
+    parser = argparse.ArgumentParser("Gymnasium training")
     parser.add_argument("config_path", type=str)
     args = parser.parse_args()
 
     # configの読み込み
-    with open(args.config_path, "r") as f:
+    with open(args.config_path) as f:
         config = yaml.safe_load(f)
-    config_savedir = config["runner"]["save"]["savedir"]
-    os.makedirs(config_savedir, exist_ok=True)
-    with open(os.path.join(config_savedir, "config.yaml"), "w") as f:
-        yaml.safe_dump(config, f)
 
     # 環境の設定
     env_config = {
-        "class": ENVS[config["env"]["name"]],
+        "class": gym.make,
         "wrappers": [
             {"class": WRAPPERS[wrapper["name"]], "init": wrapper["init"]} for wrapper in config["env"]["wrappers"]
         ],
