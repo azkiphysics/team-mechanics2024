@@ -54,12 +54,12 @@ env:
 agent:
   name: SAC
   init:
-    actor_learning_rate: 3.0e-4
-    critic_learning_rate: 3.0e-4
-    gamma: 0.9999
+    actor_learning_rate: 1.0e-3
+    critic_learning_rate: 1.0e-3
+    gamma: 0.999
     batch_size: 512
     tau: 0.005
-    ent_coef: 0.007
+    ent_coef: 0.006
     loaddir:
   reset: {}
 buffer:

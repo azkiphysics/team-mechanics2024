@@ -22,6 +22,13 @@ class DQNPolicy(nn.Module):
         self.activation2 = nn.ReLU()
         self.out = nn.Linear(64, n_actions)
 
+        nn.init.orthogonal_(self.h1.weight, gain=1.0)
+        nn.init.orthogonal_(self.h2.weight, gain=1.0)
+        nn.init.orthogonal_(self.out.weight, gain=1.0)
+        self.h1.bias.data.fill_(0.0)
+        self.h2.bias.data.fill_(0.0)
+        self.out.bias.data.fill_(0.0)
+
     def forward(self, obs: torch.Tensor) -> torch.Tensor:
         h1 = self.activation1(self.h1(obs))
         h2 = self.activation2(self.h2(h1))
@@ -41,6 +48,13 @@ class DDPGActor(nn.Module):
         self.out = nn.Linear(300, n_actions)
         self.activation_out = nn.Tanh()
 
+        nn.init.orthogonal_(self.h1.weight, gain=1.0)
+        nn.init.orthogonal_(self.h2.weight, gain=1.0)
+        nn.init.orthogonal_(self.out.weight, gain=1.0)
+        self.h1.bias.data.fill_(0.0)
+        self.h2.bias.data.fill_(0.0)
+        self.out.bias.data.fill_(0.0)
+
     def forward(self, obs: torch.Tensor) -> torch.Tensor:
         h1 = self.activation1(self.h1(obs))
         h2 = self.activation2(self.h2(h1))
@@ -58,6 +72,13 @@ class DDPGCritic(nn.Module):
         self.h2 = nn.Linear(400, 300)
         self.activation2 = nn.ReLU()
         self.out = nn.Linear(300, 1)
+
+        nn.init.orthogonal_(self.h1.weight, gain=1.0)
+        nn.init.orthogonal_(self.h2.weight, gain=1.0)
+        nn.init.orthogonal_(self.out.weight, gain=1.0)
+        self.h1.bias.data.fill_(0.0)
+        self.h2.bias.data.fill_(0.0)
+        self.out.bias.data.fill_(0.0)
 
     def forward(self, obs_action: torch.Tensor) -> torch.Tensor:
         h1 = self.activation1(self.h1(obs_action))
@@ -78,6 +99,15 @@ class SACActor(nn.Module):
         self.mu = nn.Linear(256, n_actions)
         self.log_std = nn.Linear(256, n_actions)
         self.epsilon = 1e-6
+
+        nn.init.orthogonal_(self.h1.weight, gain=1.0)
+        nn.init.orthogonal_(self.h2.weight, gain=1.0)
+        nn.init.orthogonal_(self.mu.weight, gain=1.0)
+        nn.init.orthogonal_(self.log_std.weight, gain=1.0)
+        self.h1.bias.data.fill_(0.0)
+        self.h2.bias.data.fill_(0.0)
+        self.mu.bias.data.fill_(0.0)
+        self.log_std.bias.data.fill_(0.0)
 
     def forward(self, obs: torch.Tensor) -> Normal:
         h1 = self.activation1(self.h1(obs))
@@ -118,6 +148,13 @@ class SACCritic(nn.Module):
         self.h2 = nn.Linear(256, 256)
         self.activation2 = nn.ReLU()
         self.out = nn.Linear(256, 1)
+
+        nn.init.orthogonal_(self.h1.weight, gain=1.0)
+        nn.init.orthogonal_(self.h2.weight, gain=1.0)
+        nn.init.orthogonal_(self.out.weight, gain=1.0)
+        self.h1.bias.data.fill_(0.0)
+        self.h2.bias.data.fill_(0.0)
+        self.out.bias.data.fill_(0.0)
 
     def forward(self, obs_action: torch.Tensor) -> torch.Tensor:
         h1 = self.activation1(self.h1(obs_action))

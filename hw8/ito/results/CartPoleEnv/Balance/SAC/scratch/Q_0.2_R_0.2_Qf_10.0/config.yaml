@@ -1,10 +1,10 @@
 agent:
   init:
-    actor_learning_rate: 0.0003
+    actor_learning_rate: 0.001
     batch_size: 512
-    critic_learning_rate: 0.0003
-    ent_coef: 0.007
-    gamma: 0.9999
+    critic_learning_rate: 0.001
+    ent_coef: 0.006
+    gamma: 0.999
     loaddir: null
     tau: 0.005
   name: SAC
