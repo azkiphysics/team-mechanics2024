@@ -1,8 +1,8 @@
 agent:
   init:
-    actor_learning_rate: 0.001
+    actor_learning_rate: 0.0003
     batch_size: 512
-    critic_learning_rate: 0.001
+    critic_learning_rate: 0.0003
     ent_coef: 0.007
     gamma: 0.9999
     loaddir: null
