@@ -1,0 +1,28 @@
+env:
+  name: gym
+  init:
+    id: Pendulum-v1
+    render_mode: rgb_array
+  reset: {}
+  wrappers: []
+agent:
+  name: DDPG
+  init: {}
+  reset: {}
+buffer:
+  name: Buffer
+  init:
+    maxlen:
+  reset: {}
+runner:
+  name: Runner
+  init: {}
+  reset: {}
+  run:
+    total_timesteps: 40000
+    learning_starts: 10000
+    trainfreq: 1
+  evaluate:
+    moviefreq: 1
+  save:
+    savedir: results/gym/Pendulum-v1/DDPG
