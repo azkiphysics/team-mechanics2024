@@ -59,7 +59,7 @@ agent:
     gamma: 0.999
     batch_size: 512
     tau: 0.005
-    ent_coef: 0.006
+    ent_coef: 0.007
     loaddir:
   reset: {}
 buffer:

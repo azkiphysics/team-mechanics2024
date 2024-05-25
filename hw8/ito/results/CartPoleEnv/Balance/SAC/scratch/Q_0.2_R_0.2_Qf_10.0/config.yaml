@@ -3,7 +3,7 @@ agent:
     actor_learning_rate: 0.001
     batch_size: 512
     critic_learning_rate: 0.001
-    ent_coef: 0.006
+    ent_coef: 0.007
     gamma: 0.999
     loaddir: null
     tau: 0.005
