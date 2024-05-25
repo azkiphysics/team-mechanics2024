@@ -52,30 +52,31 @@ env:
     - name: RLTimeObservation
       init: {}
 agent:
-  name: DDPG
+  name: SAC
   init:
     actor_learning_rate: 1.0e-3
-    critic_learning_rate: 3.0e-3
+    critic_learning_rate: 1.0e-3
     gamma: 0.999
     batch_size: 512
     tau: 0.005
-    action_noise: 0.06
+    ent_coef: 0.007
     loaddir:
   reset: {}
 buffer:
   name: Buffer
   init:
-    maxlen: 100000
+    maxlen: 500000
   reset: {}
 runner:
   name: Runner
   init: {}
   reset: {}
   run:
-    total_timesteps: 30000
+    total_timesteps: 40000
     learning_starts: 1000
     trainfreq: 1
   evaluate:
     moviefreq: 1
+    renderfreq: 1
   save:
-    savedir: results/CartPoleEnv/Balance/DDPG/scratch/Q_0.2_R_0.2_Qf_10.0
+    savedir: results/CartPoleEnv/Balance/SAC/scratch/Q_0.2_R_0.2_Qf_10.0

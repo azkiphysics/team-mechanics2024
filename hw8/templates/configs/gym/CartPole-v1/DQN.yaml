@@ -1,0 +1,34 @@
+env:
+  name: gym
+  init:
+    id: CartPole-v1
+    render_mode: rgb_array
+  reset: {}
+  wrappers: []
+agent:
+  name: DQN
+  init:
+    target_update_interval: 500
+    learning_rate: 1.0e-4
+    gamma: 0.99
+    decay: 0.001
+    scheduler_last_ratio: 0.0
+    scheduler_iters: 100000
+  reset: {}
+buffer:
+  name: Buffer
+  init:
+    maxlen:
+  reset: {}
+runner:
+  name: Runner
+  init: {}
+  reset: {}
+  run:
+    total_timesteps: 100000
+    learning_starts: 0
+    trainfreq: 1
+  evaluate:
+    moviefreq: 1
+  save:
+    savedir: results/gym/CartPole-v1/DQN

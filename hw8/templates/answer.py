@@ -11,7 +11,7 @@ import yaml
 from tqdm import trange
 from tqdm.contrib.logging import logging_redirect_tqdm
 
-from common.agents import Agent, DDPGAgent, DQNAgent, LQRAgent, TD3Agent
+from common.agents import Agent, DDPGAgent, DQNAgent, LQRAgent, SACAgent, TD3Agent
 from common.buffers import Buffer
 from common.envs import CartPoleEnv, Env
 from common.utils import FigureMaker, MovieMaker
@@ -220,7 +220,7 @@ class Runner(object):
 
 
 ENVS = {"CartPoleEnv": CartPoleEnv}
-AGENTS = {"DQN": DQNAgent, "DDPG": DDPGAgent, "LQR": LQRAgent, "TD3": TD3Agent}
+AGENTS = {"DQN": DQNAgent, "DDPG": DDPGAgent, "LQR": LQRAgent, "SAC": SACAgent, "TD3": TD3Agent}
 BUFFERS = {"Buffer": Buffer}
 RUNNERS = {"Runner": Runner}
 WRAPPERS = {
