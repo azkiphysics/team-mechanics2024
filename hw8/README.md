@@ -397,6 +397,6 @@ DDPGは連続行動空間の制御タスクについて高パフォーマンス�
 ### 参考文献
 本課題では以下の文献を参考にして実装しています．
 1. [OpenAI Spinning Up](https://spinningup.openai.com/en/latest/index.html)
-2. V. Mnih, K. Kavukcugolu, D. Silver, A, Graves, I. Antonoglou, D. Wierstra, and M. Riedmiller, "Playing Atari with Deep Reinforcement Learning", (2013). [](https://arxiv.org/abs/1312.5602)
-3. A. Raffin, A. Hill, A. Gleave, A. Kanervisto, M. Ernestus, and N. Dormann, "Stable-Baselines3: Reliable Reinforcement Learning Implementations", Journal of Machine Learning Research, Vol. 22, No. 268, pp. 1-8 (2021). [https://github.com/DLR-RM/stable-baselines3](https://github.com/DLR-RM/stable-baselines3)
-4. F. Pardo, A. Tavakoli, and P. Kormushev, "Time Limits in Reinforcement Learning", (2022). [https://arxiv.org/abs/1712.00378](https://arxiv.org/abs/1712.00378)
+2. V. Mnih, K. Kavukcugolu, D. Silver, A, Graves, I. Antonoglou, D. Wierstra, and M. Riedmiller, "Playing Atari with Deep Reinforcement Learning", (2013). [https://arxiv.org/abs/1312.5602](https://arxiv.org/abs/1312.5602)
+3. A. Raffin, A. Hill, A. Gleave, A. Kanervisto, M. Ernestus, and N. Dormann, "Stable-Baselines3: Reliable Reinforcement Learning Implementations", _Journal of Machine Learning Research_, Vol. 22, No. 268, pp. 1-8 (2021). [https://github.com/DLR-RM/stable-baselines3](https://github.com/DLR-RM/stable-baselines3)
+4. F. Pardo, A. Tavakoli, and P. Kormushev, "Time Limits in Reinforcement Learning", _Proceedings of the 35th International Conference on Machine Learning_, (2018). [https://arxiv.org/abs/1712.00378](https://arxiv.org/abs/1712.00378)
