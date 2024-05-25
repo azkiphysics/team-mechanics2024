@@ -251,17 +251,17 @@ $$
 $$
 \begin{eqnarray}
     V^\pi(s) &=& \mathbb{E}_{\tau\sim\pi}[G(\tau) | s_0 = s]\\
-    &=& \mathbb{E}\_{a\sim\pi, s'\sim P}\Big[r(s, a, s') + \gamma\mathbb{E}\_{\tau'\sim\pi}[G(\tau') | s_0 = s']\Big| s_0 = s\Big]\\
-    &=& \mathbb{E}\_{a\sim\pi, s'\sim P}\Big[r(s, a, s') + \gamma V^\pi(s')\Big| s_0 = s\Big],
+    &=& \mathbb{E}\_{a\sim\pi, s'\sim P}\Big[r(s, a, s') + \gamma\mathbb{E}\_{\tau'\sim\pi}[G(\tau') | s_0 = s']\Big]\\
+    &=& \mathbb{E}\_{a\sim\pi, s'\sim P}\Big[r(s, a, s') + \gamma V^\pi(s')\Big],
 \end{eqnarray}
 $$
 
 $$
 \begin{eqnarray}
     Q^\pi(s, a) &=& \mathbb{E}_{\tau\sim\pi}[G(\tau) | s_0 = s, a_0 = a]\\
-    &=& \mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma\mathbb{E}\_{\tau'\sim\pi}[G(\tau') | s_0 = s']\Big| s_0 = s, a_0 = a\Big]\\
-    &=& \mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma V^\pi(s')\Big| s_0 = s, a_0 = a\Big]\\
-    &=& \mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma \mathbb{E}\_{a'\sim\pi}[Q^\pi(s', a')]\Big| s_0 = s, a_0 = a\Big].
+    &=& \mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma\mathbb{E}\_{\tau'\sim\pi}[G(\tau') | s_0 = s]\Big]\\
+    &=& \mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma V^\pi(s')\Big]\\
+    &=& \mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma \mathbb{E}\_{a'\sim\pi}[Q^\pi(s', a')]\Big].
 \end{eqnarray}
 $$
 
@@ -270,17 +270,17 @@ $$
 $$
 \begin{eqnarray}
     V^\ast(s) &=& \max_{a}\mathbb{E}\_{\tau\sim\pi}[G(\tau) | s_0 = s]\\
-    &=& \max_{a}\mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma\max_{a'}\mathbb{E}\_{\tau'\sim\pi}[G(\tau') | s_0 = s', a_0 = a']\Big| s_0 = s\Big]\\
-    &=& \max_{a}\mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma \max_{a'}Q^\ast(s', a')\Big| s_0 = s\Big]\\
-    &=& \max_{a}\mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma V^\ast(s')\Big| s_0 = s\Big],
+    &=& \max_{a}\mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma\max_{a'}\mathbb{E}\_{\tau'\sim\pi}[G(\tau') | s_0 = s', a_0 = a']\Big]\\
+    &=& \max_{a}\mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma \max_{a'}Q^\ast(s', a')\Big]\\
+    &=& \max_{a}\mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma V^\ast(s')\Big],
 \end{eqnarray}
 $$
 
 $$
 \begin{eqnarray}
     Q^\ast(s, a) &=& \mathbb{E}\_{\tau\sim\pi}[G(\tau) | s_0 = s, a_0 = a]\\
-    &=& \mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma\max_{a'}\mathbb{E}\_{\tau'\sim\pi}[G(\tau') | s_0 = s', a_0 = a']\Big| s_0 = s, a_0 = a\Big]\\
-    &=& \mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma \max_{a'}Q^\ast(s', a')\Big| s_0 = s, a_0 = a\Big].
+    &=& \mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma\max_{a'}\mathbb{E}\_{\tau'\sim\pi}[G(\tau') | s_0 = s', a_0 = a']\Big]\\
+    &=& \mathbb{E}\_{s'\sim P}\Big[r(s, a, s') + \gamma \max_{a'}Q^\ast(s', a')\Big].
 \end{eqnarray}
 $$
 
