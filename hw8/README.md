@@ -43,7 +43,7 @@ hw8
     |   └── CartPoleEnv
     |       ├── Balance
     |       |   ├── DDPG.yaml
-    |       |   ├── DDPG.yaml
+    |       |   ├── DQN.yaml
     |       |   └── TD3.yaml
     |       └── SwingUp
     |           └── TD3.yaml
