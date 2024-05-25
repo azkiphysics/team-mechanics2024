@@ -295,12 +295,12 @@ $$
 
 DQNの注意点として，行動空間は離散的である必要があります．そのため，制御入力が連続値を取るような制御問題では，制御入力を離散化してDQNを適用する必要があります．
 
-行動価値関数 $Q_\theta(s, a)$ は最適行動価値関数のベルマン方程式の左辺を予測値，右辺を目標値として最小二乗誤差を計算します．したがって，損失関数 $\mathcal{L}$ は次のように定義されます．ここで, $\mathcal{D}$ は環境とエージェントの相互作用によって得られた遷移データを集めたデータベースを表します．このようなデータベースをリプレイバッファと呼びます．
+行動価値関数 $Q_\theta(s, a)$ は最適行動価値関数のベルマン方程式の左辺を予測値，右辺を目標値として最小二乗誤差を計算します．したがって，損失関数 $\mathcal{L}$ は次のように定義されます．ここで, $\mathcal{D}$ は環境とエージェントの相互作用によって得られた遷移データを集めたデータベースを表します．このようなデータベースをリプレイバッファと呼びます．また, $d$ は状態 $s'$ の終了判定を表しており, $s'$ が終了状態であれば $1$ そうでなければ $0$ になります．
 
 $$
 \begin{eqnarray}
     \mathcal{L} &=& \mathbb{E}\_{(s, a, s')\sim\mathcal{D}}\Bigg[\frac{1}{2}\Big(y - Q_\theta(s, a)\Big)^2\Bigg]\\
-    y &=& r(s, a, s') + \gamma \max_{a'}Q_\theta(s', a')
+    y &=& r(s, a, s') + \gamma (1 - d) \max_{a'}Q_\theta(s', a')
 \end{eqnarray}
 $$
 
@@ -320,11 +320,11 @@ $$
 $$
 \begin{eqnarray}
     \mathcal{L} &=& \mathbb{E}\_{(s, a, s')\sim\mathcal{D}}\Big[\mathrm{HuberLoss}(y - Q_\theta(s, a))\Big]\\
-    y &=& r(s, a, s') + \gamma \max_{a'}Q_{\theta_{\mathrm{target}}}(s', a')
+    y &=& r(s, a, s') + \gamma (1 - d) \max_{a'}Q_{\theta_{\mathrm{target}}}(s', a')
 \end{eqnarray}
 $$
 
-上記の損失関数 $\mathcal{L}$ を用いて，行動価値関数のパラメータ $\theta$ を勾配降下法により求めます. $\eta$ は学習率を表します．
+上記の損失関数 $\mathcal{L}$ を用いて，行動価値関数のパラメータ $\theta$ を勾配降下法により更新します. $\eta$ は学習率を表します．
 
 $$
 \theta \leftarrow \theta - \eta\nabla_{\theta}\mathcal{L}
@@ -335,6 +335,54 @@ $$
 ![](./ito/algorithms/dqn.png)
 
 ##### Deep deterministic policy gradient (DDPG)
+DQNで説明したように, DQNでは離散空間のみ扱うことができる一方，連続空間を扱うためには離散空間に変換してから最適化を実行する必要があります．しかし，制御の多くは連続空間なので, 実際問題として連続空間を直接扱うことができる方法を考える必要があります．そこで, DDPGでは最適方策 $\mu^\ast$ と最適行動価値関数 $Q^\ast$ をニューラルネットワークでモデル化します．モデル化したそれぞれの関数を $\mu_\theta$ , $Q_\phi$ とすると, 行動は以下の式で決定されます．
+
+$$
+\begin{eqnarray}
+    a &=& \mathrm{clip}(\mu_\theta(s) + \epsilon, a_{\mathrm{Low}}, a_{\mathrm{High}})\\
+    \epsilon&\sim&\mathcal{N}
+\end{eqnarray}
+$$
+
+また，方策と行動価値観数の損失関数はそれぞれ次のとおりです．
+
+- 方策 $\pi_\theta$ の損失関数
+
+$$
+\mathcal{L}\_{\mathrm{actor}}(\theta) = -\mathbb{E}\_{s\sim\mathcal{D}}[Q_\phi(s, \mu_\theta(s))]
+$$
+
+- 行動価値関数 $Q_\phi$ の損失関数
+
+$$
+\begin{eqnarray}
+    \mathcal{L}\_{\mathrm{critic}}(\phi) &=& \mathbb{E}\_{(s, a, s')\sim\mathcal{D}}\Bigg[\frac{1}{2}\Big(y - Q_\phi(s, a)\Big)^2\Bigg]\\
+    y &=& r(s, a, s') + \gamma (1 - d) \max_{a'}Q_{\phi_{\mathrm{target}}}(s', \mu_{\theta_{\mathrm{target}}}(s'))
+\end{eqnarray}
+$$
+
+ここで, $\phi\_{\theta_{\mathrm{target}}}$ , $Q\_{\phi_{\mathrm{target}}}$ はそれぞれ方策と行動価値関数のターゲットネットワークと呼ばれ，以下の式に基づきネットワークのパラメータを更新します. $\rho$ は $0\sim1$ までの定数で一般に1に近い値に設定されます．
+
+$$
+\theta_{\mathrm{target}}\leftarrow \rho\theta_{\mathrm{target}} + (1 - \rho)\theta
+$$
+
+$$
+\phi_{\mathrm{target}}\leftarrow \rho\phi_{\mathrm{target}} + (1 - \rho)\phi
+$$
+
+以上より，上記の2つの損失関数を用いて方策と行動価値関数のパラメータ $\phi$ と $\theta$ を勾配降下法により更新します．
+
+$$
+\theta \leftarrow \theta - \eta\nabla_{\theta}\mathcal{L}\_{\mathrm{actor}}
+$$
+
+$$
+\phi \leftarrow \phi - \eta\nabla_{\phi}\mathcal{L}\_{\mathrm{critic}}
+$$
+
+以下にDDPGの疑似コードを載せておきます．
+
 ![](./ito/algorithms/ddpg.svg)
 
 ##### Twin delay deep deterministic policy gradient (TD3)
