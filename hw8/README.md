@@ -385,7 +385,15 @@ $$
 
 ![](./ito/algorithms/ddpg.svg)
 
-##### Twin delay deep deterministic policy gradient (TD3)
+##### Twin delayed deep deterministic policy gradient (TD3)
+DDPGは連続行動空間の制御タスクについて高パフォーマンスを実現する一方，ハイパーパラメータを少し変えただけで学習結果が大きく変化します (=DDPGはハイパーパラメータに対して脆い). また, DDPGのよくある学習の失敗として, 行動価値関数が過大評価されてしまい, 結果として方策の学習が上手くいかない場合があります. そこで, TD3では以下の3つのトリックを利用してDDPGの問題に対処します．
+
+1. **Clipped Double-Q learning**: 行動価値関数を2つ用意し, 値の小さい方を利用してベルマン誤差の目標値 $y$ 内の行動価値関数の計算を行う．
+2. **"Delayed" Policy Update**: 方策の更新頻度を行動価値関数の更新頻度よりも少なくする．TD3の論文では，行動価値関数の更新を2回するごとに方策の更新を1回することを推奨している.
+3. **Target Policy Smoothing**: ベルマン誤差の目標値 $y$ 内の状態 $s'$ の行動 $a'$ にノイズを加える．
+
+以下にTD3の疑似コードを載せておきます．
+
 ![](./ito/algorithms/td3.svg)
 
 ##### Soft actor critic (SAC)
