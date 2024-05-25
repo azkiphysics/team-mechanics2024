@@ -39,14 +39,12 @@ hw8
     |   ├── utils.py
     |   └── wrappers.py
     ├── configs
-    |   ├── CartPoleEnv
-    |   |   ├── DDPG.yaml
-    |   |   └── TD3.yaml
-    |   └── gym
-    |       ├── CartPole-v1
-    |       |   └── DQN.yaml
-    |       └── Pendulum-v1
-    |           ├── DDPG.yaml
+    |   └── CartPoleEnv
+    |       ├── Balance
+    |       |   ├── DDPG.yaml
+    |       |   ├── DDPG.yaml
+    |       |   └── TD3.yaml
+    |       └── SwingUp
     |           └── TD3.yaml
     └── answer.py
 ```
@@ -396,9 +394,9 @@ DDPGは連続行動空間の制御タスクについて高パフォーマンス�
 
 ![](./ito/algorithms/td3.svg)
 
-##### Soft actor critic (SAC)
-![](./ito/algorithms/sac.svg)
-
-#### 学習の工夫
-##### Time limits in reinforcment learning
-##### 報酬設計
+### 参考文献
+本課題では以下の文献を参考にして実装しています．
+1. [OpenAI Spinning Up](https://spinningup.openai.com/en/latest/index.html)
+2. V. Mnih, K. Kavukcugolu, D. Silver, A, Graves, I. Antonoglou, D. Wierstra, and M. Riedmiller, "Playing Atari with Deep Reinforcement Learning", (2013). [](https://arxiv.org/abs/1312.5602)
+3. A. Raffin, A. Hill, A. Gleave, A. Kanervisto, M. Ernestus, and N. Dormann, "Stable-Baselines3: Reliable Reinforcement Learning Implementations", Journal of Machine Learning Research, Vol. 22, No. 268, pp. 1-8 (2021). [https://github.com/DLR-RM/stable-baselines3](https://github.com/DLR-RM/stable-baselines3)
+4. F. Pardo, A. Tavakoli, and P. Kormushev, "Time Limits in Reinforcement Learning", (2022). [https://arxiv.org/abs/1712.00378](https://arxiv.org/abs/1712.00378)
