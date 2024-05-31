@@ -1,7 +1,6 @@
 import csv
 import pickle
 
-
 if __name__ == "__main__":
     # csvファイルの読み込み
     print("csvファイルの読み込み")

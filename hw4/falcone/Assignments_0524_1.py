@@ -47,7 +47,7 @@ class Env(object):
 
 
 class LorenzEnv(Env):
-    def __init__(self, t_max, dt=1e-3, rho=28.0, sigma=10.0, beta=8.0/3.0):
+    def __init__(self, t_max, dt=1e-3, rho=28.0, sigma=10.0, beta=8.0 / 3.0):
         super().__init__(t_max, dt=dt)
         self.rho = rho
         self.sigma = sigma
@@ -74,11 +74,11 @@ if __name__ == "__main__":
 
     info = env.reset(initial_t, initial_x, initial_y, initial_z)
     done = info.pop("done")
-    add_data(result, info) # データの保存
+    add_data(result, info)  # データの保存
     while not done:
         info = env.step()
         done = info.pop("done")
-        add_data(result, info) # データの保存
+        add_data(result, info)  # データの保存
 
     # csvファイルの保存
     path = "hw1_result.csv"
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     with open(path, "w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
         writer.writerows([keys] + data)
-    
+
     # pickleファイルの保存
     path = "hw1_result.pickle"
     with open(path, "wb") as f:
