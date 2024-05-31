@@ -51,7 +51,7 @@ class QLearning(object):
         self,
         observation_space: Discrete,
         action_space: Discrete,
-        alpha: float = 0.5,
+        learning_rate: float = 0.5,
         gamma: float = 0.99,
         epsilon_start: float = 0.5,
     ) -> None:
@@ -60,13 +60,13 @@ class QLearning(object):
         Args:
             observation_space (Discrete): 環境クラスの観測空間
             action_space (Discrete): 環境クラスの行動空間
-            alpha (float): 学習率
+            learning_rate (float): 学習率
             epsilon_start (float): ε-greedy法のεの初期値
         """
 
         self.observation_space = observation_space
         self.action_space = action_space
-        self.alpha = alpha
+        self.learning_rate = learning_rate
         self.gamma = gamma
         self.epsilon_start = epsilon_start
 
@@ -127,7 +127,7 @@ class QLearning(object):
         q = self.q_table[data["obs"], data["action"]]
         next_q_max = np.max(self.q_table[data["next_obs"]])
         td_error = data["reward"] + self.gamma * (1.0 - data["done"]) * next_q_max - q
-        self.q_table[data["obs"], data["action"]] += self.alpha * td_error
+        self.q_table[data["obs"], data["action"]] += self.learning_rate * td_error
         return {"loss": 0.5 * td_error**2}
 
     def save(self, savedir: str) -> None:
@@ -414,7 +414,9 @@ if __name__ == "__main__":
     alpha = 0.5
     gamma = 0.99
     epsilon_start = 0.5
-    agent = QLearning(env.observation_space, env.action_space, alpha=alpha, gamma=gamma, epsilon_start=epsilon_start)
+    agent = QLearning(
+        env.observation_space, env.action_space, learning_rate=alpha, gamma=gamma, epsilon_start=epsilon_start
+    )
 
     # シミュレーションの設定
     n_evaluate_episodes = 100
