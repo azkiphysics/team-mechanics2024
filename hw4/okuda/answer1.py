@@ -1,5 +1,6 @@
 import csv
 import pickle
+import os
 
 
 def add_data(result, info):
@@ -86,13 +87,17 @@ if __name__ == "__main__":
         done = info.pop("done")
         add_data(result, info)
 
-    path = "hw1_result.csv"
+    savedir = os.path.join("hw4", "okuda")
+    os.makedirs(savedir, exist_ok=True)
+    path = os.path.join(savedir, "hw1_result.csv")
     keys = list(result.keys())
     data = [[result[key][i] for key in keys] for i in range(len(result[keys[0]]))]
     with open(path, "w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
         writer.writerows([keys] + data)
 
-    path = "hw1_result.pickle"
+    savedir = os.path.join("hw4", "okuda")
+    os.makedirs(savedir, exist_ok=True)
+    path = os.path.join(savedir, "hw1_result.pickle")
     with open(path, "wb") as f:
         pickle.dump(result, f)
