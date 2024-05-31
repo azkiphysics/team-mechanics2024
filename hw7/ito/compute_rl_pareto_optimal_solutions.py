@@ -1,8 +1,8 @@
 import multiprocessing as mp
 import os
 import pickle
-from multiprocessing.connection import PipeConnection
-from typing import Dict, Literal, Tuple
+from multiprocessing.connection import Connection
+from typing import Literal
 
 import numpy as np
 import yaml
@@ -13,8 +13,8 @@ from common.utils import FigureMaker3d
 
 
 def execute_rl_training(
-    worker_id: int, Q: float, R: float, config: Dict[str, Dict[str, int | float | str | list]]
-) -> Tuple[int, float, float, float]:
+    worker_id: int, Q: float, R: float, config: dict[str, dict[str, int | float | str | list]]
+) -> tuple[int, float, float, float]:
     # Configの設定
     config["env"]["reset"]["Q"] = Q
     config["env"]["reset"]["R"] = R
@@ -67,11 +67,11 @@ def execute_rl_training(
     return worker_id, sse_state, sse_u, sse_final_state
 
 
-def worker(conn: PipeConnection):
+def worker(conn: Connection):
     while True:
-        args: Tuple[
+        args: tuple[
             Literal["training", "finish", "idling"],
-            Tuple[int, float, float, Dict[str, Dict[str, int | float | str | list]]] | None,
+            tuple[int, float, float, dict[str, dict[str, int | float | str | list]]] | None,
         ] = conn.recv()
         command = args[0]
         if command == "training":

@@ -1,5 +1,3 @@
-from typing import Dict, List, Tuple
-
 import numpy as np
 
 from .envs import Env, MultiBodyEnv
@@ -50,7 +48,7 @@ class Wrapper(object):
 
     def reset(
         self, initial_t: float, initial_x: np.ndarray, integral_method: str = "runge_kutta_method", **kwargs
-    ) -> Tuple[np.ndarray, Dict[str, bool | float | np.ndarray]]:
+    ) -> tuple[np.ndarray, dict[str, bool | float | np.ndarray]]:
         _, info = self.env.reset(initial_t, initial_x, integral_method=integral_method, **kwargs)
         t = info.get("t")
         x = info.get("x")
@@ -59,7 +57,7 @@ class Wrapper(object):
         info |= {"s": state.copy()}
         return obs, info
 
-    def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, Dict[str, bool | float | np.ndarray]]:
+    def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict[str, bool | float | np.ndarray]]:
         action = self.convert_action(action)
         _, _, _, _, info = self.env.step(action)
         t = info.get("t")
@@ -73,7 +71,7 @@ class Wrapper(object):
         info |= {"s": next_state.copy()}
         return next_obs, reward, terminated, truncated, info
 
-    def render(self) -> List[np.ndarray]:
+    def render(self) -> list[np.ndarray]:
         return self.env.render()
 
     @property
@@ -114,13 +112,13 @@ class MultiBodyEnvWrapper(Wrapper):
         self,
         initial_t: float,
         initial_x: np.ndarray,
-        target_x: List[float] | np.ndarray,
+        target_x: list[float] | np.ndarray,
         Q: float | np.ndarray,
         Qf: float | np.ndarray,
         R: float | np.ndarray,
         integral_method: str = "runge_kutta_method",
         **kwargs,
-    ) -> Tuple[np.ndarray | Dict[str, bool | float | np.ndarray]]:
+    ) -> tuple[np.ndarray | dict[str, bool | float | np.ndarray]]:
         n_states = self.state_space.shape[0]
         n_us = self.u_space.shape[0]
         self.Q = Q * np.identity(n_states, dtype=np.float64)
@@ -249,15 +247,15 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
 
         self.w_base: float = None
         self.w_final: float = None
-        self.ts: List[float] = None
-        self.xs: List[np.ndarray] = None
+        self.ts: list[float] = None
+        self.xs: list[np.ndarray] = None
 
     def get_reward(self, t: float, x: np.ndarray, u: np.ndarray) -> float:
         s = self.get_state(x)
         reward = self.w_base - 0.5 * (s @ self.Q @ s + u @ self.R @ u) + self.w_final * np.exp(-0.5 * s @ self.Qf @ s)
         return reward
 
-    def step(self, action: np.ndarray) -> Tuple[np.ndarray | float | bool | Dict[str, bool | float | np.ndarray]]:
+    def step(self, action: np.ndarray) -> tuple[np.ndarray | float | bool | dict[str, bool | float | np.ndarray]]:
         t_end = self.unwrapped.t + self.t_interval
         self.ts.clear()
         self.xs.clear()
@@ -270,8 +268,8 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
     def reset(
         self,
         initial_t: float,
-        initial_x: List[float] | np.ndarray,
-        target_x: List[float] | np.ndarray,
+        initial_x: list[float] | np.ndarray,
+        target_x: list[float] | np.ndarray,
         Q: float | np.ndarray,
         Qf: float | np.ndarray,
         R: float | np.ndarray,
@@ -279,7 +277,7 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         w_final: float = 25.0,
         w_base: float = 0.1,
         **kwargs,
-    ) -> Tuple[np.ndarray | Dict[str, bool | float | np.ndarray]]:
+    ) -> tuple[np.ndarray | dict[str, bool | float | np.ndarray]]:
         obs, info = super().reset(initial_t, initial_x, target_x, Q, Qf, R, integral_method, **kwargs)
         self.w_final = w_final
         self.w_base = w_base
@@ -287,7 +285,7 @@ class RLMultiBodyEnvWrapper(MultiBodyEnvWrapper):
         self.xs = [self.unwrapped.x.copy()]
         return obs, info
 
-    def render(self) -> List[np.ndarray]:
+    def render(self) -> list[np.ndarray]:
         frames = []
         for t, x in zip(self.ts, self.xs):
             setattr(self.unwrapped, "t", t)

@@ -8,9 +8,6 @@ from typing import Dict, List
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-from tqdm import trange
-from tqdm.contrib.logging import logging_redirect_tqdm
-
 from common.agents import Agent, DDPGAgent, DQNAgent, LQRAgent, SACAgent, TD3Agent
 from common.buffers import Buffer
 from common.envs import CartPoleEnv, Env
@@ -21,6 +18,8 @@ from common.wrappers import (
     LQRMultiBodyEnvWrapper,
     RLTimeObservationWrapper,
 )
+from tqdm import trange
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 # ロガーの設定
 if __name__ == "__main__":

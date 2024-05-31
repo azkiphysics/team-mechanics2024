@@ -1,17 +1,17 @@
 import argparse
 import logging
 from logging import Formatter, StreamHandler, getLogger
-from typing import Dict, List
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
+from tqdm import trange
+from tqdm.contrib.logging import logging_redirect_tqdm
+
 from common.agents import Agent, DDPGAgent, DQNAgent, TD3Agent
 from common.buffers import Buffer
 from common.utils import FigureMaker, MovieMaker
-from tqdm import trange
-from tqdm.contrib.logging import logging_redirect_tqdm
 
 # ロガーの設定
 logger = getLogger(__name__)
@@ -39,9 +39,9 @@ plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
 class Runner(object):
     def __init__(
         self,
-        env_config: Dict[str, gym.Env | Dict[str, int | float] | List[Dict[str, int | float]]],
-        agent_config: Dict[str, Agent | Dict[str, int | float]],
-        buffer_config: Dict[str, Buffer | Dict[str, int]],
+        env_config: dict[str, gym.Env | dict[str, int | float] | list[dict[str, int | float]]],
+        agent_config: dict[str, Agent | dict[str, int | float]],
+        buffer_config: dict[str, Buffer | dict[str, int]],
     ) -> None:
         self.env_config = env_config
         self.agent_config = agent_config
@@ -67,7 +67,7 @@ class Runner(object):
         self.figure_maker.reset()
         self.movie_maker.reset()
 
-    def run(self, total_timesteps: int, learning_starts: int = 1000, trainfreq: int | None = None) -> Dict[str, float]:
+    def run(self, total_timesteps: int, learning_starts: int = 1000, trainfreq: int | None = None) -> dict[str, float]:
         k_episodes = 0
         total_rewards = 0.0
         obs, _ = self.env.reset(**self.env_config["reset"])

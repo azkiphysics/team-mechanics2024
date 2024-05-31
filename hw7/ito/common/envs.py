@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
-
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
@@ -44,7 +42,7 @@ class Env(object):
     def action_space(self) -> Box:
         raise NotImplementedError()
 
-    def integral(self, t: float, x: np.ndarray, u: np.ndarray) -> Tuple[float, np.ndarray]:
+    def integral(self, t: float, x: np.ndarray, u: np.ndarray) -> tuple[float, np.ndarray]:
         """運動方程式の積分"""
         if self.integral_method == "euler_method":
             return self.euler_method(t, x, u)
@@ -53,14 +51,14 @@ class Env(object):
         else:
             assert False
 
-    def euler_method(self, t: float, x: np.ndarray, u: np.ndarray) -> Tuple[float, np.ndarray]:
+    def euler_method(self, t: float, x: np.ndarray, u: np.ndarray) -> tuple[float, np.ndarray]:
         """オイラー法"""
         dx_dt = self.motion_equation(t, x, u)
         next_t = t + self.dt
         next_x = x + self.dt * dx_dt
         return next_t, next_x
 
-    def runge_kutta_method(self, t: float, x: np.ndarray, u: np.ndarray) -> Tuple[float, np.ndarray]:
+    def runge_kutta_method(self, t: float, x: np.ndarray, u: np.ndarray) -> tuple[float, np.ndarray]:
         """ルンゲクッタ法"""
         k1 = self.motion_equation(t, x, u)
         k2 = self.motion_equation(t, x + self.dt / 2 * k1, u)
@@ -106,10 +104,10 @@ class Env(object):
     def reset(
         self,
         initial_t: float,
-        initial_x: List[float] | np.ndarray,
+        initial_x: list[float] | np.ndarray,
         integral_method: str = "runge_kutta_method",
         **kwargs,
-    ) -> Tuple[np.ndarray, Dict[str, bool | float | np.ndarray]]:
+    ) -> tuple[np.ndarray, dict[str, bool | float | np.ndarray]]:
         """シミュレーションの初期化"""
         self.integral_method = integral_method
         self.initial_t = initial_t
@@ -124,7 +122,7 @@ class Env(object):
 
     def step(
         self, action: int | np.ndarray
-    ) -> Tuple[np.ndarray, float, bool, bool, Dict[str, bool | float | np.ndarray]]:
+    ) -> tuple[np.ndarray, float, bool, bool, dict[str, bool | float | np.ndarray]]:
         """シミュレーションの実行 (1ステップ)"""
         u = self.get_control_input(action)
         self.t, self.x = self.integral(self.t, self.x, u)
@@ -137,7 +135,7 @@ class Env(object):
         info = {"t": self.t, "x": self.x.copy(), "u": u.copy(), "e": e, "s": s.copy()}
         return obs, reward, terminated, truncated, info
 
-    def render(self) -> List[np.ndarray]:
+    def render(self) -> list[np.ndarray]:
         """図の描画"""
         raise NotImplementedError()
 
@@ -181,37 +179,37 @@ class MultiBodyEnv(Env):
         """(Cq * dq_dt)qの計算"""
         raise NotImplementedError()
 
-    def get_coordinate_indices(self) -> List[int]:
+    def get_coordinate_indices(self) -> list[int]:
         """一般座標のインデックスの取得"""
         raise NotImplementedError()
 
-    def get_independent_coordinate_indices(self) -> List[int]:
+    def get_independent_coordinate_indices(self) -> list[int]:
         """独立一般座標のインデックスの取得"""
         raise NotImplementedError()
 
-    def get_dependent_coordinate_indices(self) -> List[int]:
+    def get_dependent_coordinate_indices(self) -> list[int]:
         """従属一般座標のインデックスの取得"""
         pos_indices = self.get_coordinate_indices()
         independent_pos_indices = self.get_independent_coordinate_indices()
         return list(set(pos_indices) - set(independent_pos_indices))
 
-    def get_velocity_indices(self) -> List[int]:
+    def get_velocity_indices(self) -> list[int]:
         """一般速度のインデックスの取得"""
         n_coordinates = len(self.get_coordinate_indices())
         return list(range(n_coordinates, 2 * n_coordinates))
 
-    def get_independent_velocity_indices(self) -> List[int]:
+    def get_independent_velocity_indices(self) -> list[int]:
         """独立一般速度のインデックスの取得"""
         n_coordinates = len(self.get_coordinate_indices())
         return [n_coordinates + idx for idx in self.get_independent_coordinate_indices()]
 
-    def get_dependent_velocity_indices(self) -> List[int]:
+    def get_dependent_velocity_indices(self) -> list[int]:
         """従属一般座標のインデックスの取得"""
         vel_indices = self.get_velocity_indices()
         independent_vel_indices = self.get_independent_velocity_indices()
         return list(set(vel_indices) - set(independent_vel_indices))
 
-    def get_state_indices(self) -> List[int]:
+    def get_state_indices(self) -> list[int]:
         """状態変数のインデックスの取得"""
         return self.get_independent_coordinate_indices() + self.get_independent_velocity_indices()
 
@@ -248,10 +246,10 @@ class MultiBodyEnv(Env):
     def reset(
         self,
         initial_t: float,
-        initial_x: List[float] | np.ndarray,
+        initial_x: list[float] | np.ndarray,
         integral_method: str = "runge_kutta_method",
         **kwargs,
-    ) -> Tuple[np.ndarray, Dict[str, bool | float | np.ndarray]]:
+    ) -> tuple[np.ndarray, dict[str, bool | float | np.ndarray]]:
         """シミュレーションの初期化"""
         _, info = super().reset(initial_t, initial_x, integral_method=integral_method)
         self.x = self.newton_raphson_method(self.t, self.x)
@@ -262,7 +260,7 @@ class MultiBodyEnv(Env):
         info |= {"x": self.x.copy(), "e": e, "C": C.copy(), "s": s.copy()}
         return obs, info
 
-    def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, Dict[str, bool | float | np.ndarray]]:
+    def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict[str, bool | float | np.ndarray]]:
         """シミュレーションの実行 (1ステップ)"""
         u = self.get_control_input(action)
         _, reward, terminated, truncated, info = super().step(action)
@@ -383,10 +381,10 @@ class CartPoleEnv(MultiBodyEnv):
         Cqdqq[1, 3] = theta_dot_pole * self.l_pole * np.sin(theta_pole)
         return Cqdqq
 
-    def get_coordinate_indices(self) -> List[int]:
+    def get_coordinate_indices(self) -> list[int]:
         return list(range(4))
 
-    def get_independent_coordinate_indices(self) -> List[int]:
+    def get_independent_coordinate_indices(self) -> list[int]:
         return [0, 3]
 
     def motion_equation(self, t: float, x: np.ndarray, u: np.ndarray):
@@ -409,7 +407,7 @@ class CartPoleEnv(MultiBodyEnv):
             + self.m_ball * self.g * y_ball
         )
 
-    def render(self) -> List[np.ndarray]:
+    def render(self) -> list[np.ndarray]:
         if self.fig is None:
             self.fig, self.ax = plt.subplots()
         self.ax.cla()

@@ -2,7 +2,6 @@ import os
 import pickle
 import random
 from collections import defaultdict, deque
-from typing import Dict, List
 
 import numpy as np
 
@@ -13,14 +12,14 @@ class Buffer(object):
     def __init__(self, maxlen: int | None = None) -> None:
         self.maxlen = maxlen
 
-        self.buffer: Dict[str, List[float | np.ndarray]] | None = None
+        self.buffer: dict[str, list[float | np.ndarray]] | None = None
         self.n_data: int | None = None
 
     def reset(self):
         self.buffer = defaultdict(lambda: deque(maxlen=self.maxlen))
         self.n_data = 0
 
-    def push(self, data: Dict[str, List[float | np.ndarray]]):
+    def push(self, data: dict[str, list[float | np.ndarray]]):
         if self.buffer is None:
             self.reset()
         for key, value in data.items():
@@ -29,7 +28,7 @@ class Buffer(object):
         if self.maxlen is not None:
             self.n_data = min(self.n_data, self.maxlen)
 
-    def sample(self, n_samples: int) -> Dict[str, List[float | np.ndarray]]:
+    def sample(self, n_samples: int) -> dict[str, list[float | np.ndarray]]:
         if self.n_data == 0:
             return self.buffer
         n_samples = min(self.n_data, n_samples)
@@ -37,7 +36,7 @@ class Buffer(object):
         data = {key: [value[idx] for idx in indices] for key, value in self.buffer.items()}
         return data
 
-    def get(self) -> Dict[str, List[float | np.ndarray]]:
+    def get(self) -> dict[str, list[float | np.ndarray]]:
         return {key: value for key, value in self.buffer.items()}
 
     def clear(self):

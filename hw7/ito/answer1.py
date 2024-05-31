@@ -3,7 +3,6 @@ import logging
 import os
 import pickle
 from logging import Formatter, StreamHandler, getLogger
-from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -53,9 +52,9 @@ plt.rcParams["axes.axisbelow"] = True  # グリッドを最背面に移動
 class Runner(object):
     def __init__(
         self,
-        env_config: Dict[str, Env | Dict[str, int | float] | List[Dict[str, int | float]]],
-        agent_config: Dict[str, Agent | Dict[str, int | float]],
-        buffer_config: Dict[str, Buffer | Dict[str, int]],
+        env_config: dict[str, Env | dict[str, int | float] | list[dict[str, int | float]]],
+        agent_config: dict[str, Agent | dict[str, int | float]],
+        buffer_config: dict[str, Buffer | dict[str, int]],
     ) -> None:
         self.env_config = env_config
         self.agent_config = agent_config
@@ -81,7 +80,7 @@ class Runner(object):
         self.figure_maker.reset()
         self.movie_maker.reset()
 
-    def run(self, total_timesteps: int, learning_starts: int = 1000, trainfreq: int | None = None) -> Dict[str, float]:
+    def run(self, total_timesteps: int, learning_starts: int = 1000, trainfreq: int | None = None) -> dict[str, float]:
         k_episodes = 0
         total_rewards = 0.0
         obs, _ = self.env.reset(**self.env_config["reset"])
