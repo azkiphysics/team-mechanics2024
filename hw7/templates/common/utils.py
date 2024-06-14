@@ -1,11 +1,11 @@
 import os
 from typing import Dict, List, Literal, Sequence
 
-import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 
 
 class Box(object):
@@ -136,14 +136,8 @@ class MovieMaker(object):
     def make(self, savedir: str, t_max: float, savefile: str = "animation.mp4"):
         os.makedirs(savedir, exist_ok=True)
         savepath = os.path.join(savedir, savefile)
-        fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
-        size = self.frames[0].shape[:2][::-1]
-        video = cv2.VideoWriter(savepath, fourcc, int(len(self.frames) / t_max), size)
-        for frame in self.frames:
-            frame = cv2.resize(frame, size)
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            video.write(frame)
-        video.release()
+        clip = ImageSequenceClip(self.frames, fps=int(len(self.frames) / t_max))
+        clip.write_videofile(savepath)
 
     def close(self):
         self.frames.clear()
