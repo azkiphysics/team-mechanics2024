@@ -1,11 +1,11 @@
 import os
-from typing import Dict, List, Literal, Sequence
+from typing import Literal, Sequence
 
-import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 
 
 class Box(object):
@@ -47,7 +47,7 @@ class FigureMaker(object):
 
     def make(
         self,
-        data: Dict[str, Dict[str, np.ndarray | List[Dict[str, np.ndarray]]]],
+        data: dict[str, dict[str, np.ndarray | list[dict[str, np.ndarray]]]],
         draw_type: Literal["plot", "scatter"] = "plot",
     ):
         """図の作成"""
@@ -94,7 +94,7 @@ class FigureMaker3d(FigureMaker):
         else:
             self.ax.cla()
 
-    def make(self, data: List[Dict[str, Dict[str, np.ndarray]]] | Dict[str, Dict[str, np.ndarray]]):
+    def make(self, data: list[dict[str, dict[str, np.ndarray]]] | dict[str, dict[str, np.ndarray]]):
         """図の作成"""
         if isinstance(data, dict):
             data = [data]
@@ -122,12 +122,12 @@ class MovieMaker(object):
     """動画作成クラス"""
 
     def __init__(self) -> None:
-        self.frames: List[np.ndarray] = None
+        self.frames: list[np.ndarray] = None
 
     def reset(self):
         self.frames = []
 
-    def add(self, frames: np.ndarray | List[np.ndarray]):
+    def add(self, frames: np.ndarray | list[np.ndarray]):
         if isinstance(frames, np.ndarray):
             self.frames.append(frames)
         else:
@@ -136,14 +136,8 @@ class MovieMaker(object):
     def make(self, savedir: str, t_max: float, savefile: str = "animation.mp4"):
         os.makedirs(savedir, exist_ok=True)
         savepath = os.path.join(savedir, savefile)
-        fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
-        size = self.frames[0].shape[:2][::-1]
-        video = cv2.VideoWriter(savepath, fourcc, int(len(self.frames) / t_max), size)
-        for frame in self.frames:
-            frame = cv2.resize(frame, size)
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            video.write(frame)
-        video.release()
+        clip = ImageSequenceClip(self.frames, fps=int(len(self.frames) / t_max))
+        clip.write_videofile(savepath)
 
     def close(self):
         self.frames.clear()
